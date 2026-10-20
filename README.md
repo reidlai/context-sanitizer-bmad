@@ -74,18 +74,22 @@ function execute_deployment() {
 }
 """
 
-# The proxy will block/redact the semantic leak (Project Alpha), 
-# scrub the AWS key, and compress token bloat.
+# The engine scrubs credentials, compresses bloat, and checks semantic guardrails
 result = sanitizer.sanitize_and_compress(dirty_prompt)
 
-print("--- Compressed Prompt ---")
-print(result["compressed_prompt"])
+# Handle security block or proceed with clean, compressed prompt
+if result.get("status") == "blocked":
+    print(f"⚠️ Security Alert: Payload blocked! Reason: {result['reason']}")
+    print(f"Violations detected: {result.get('violations', [])}")
+else:
+    print("--- Compressed Prompt ---")
+    print(result["compressed_prompt"])
 
-print("\n--- Optimization Metrics ---")
-print(f"Original Tokens: {result['origin_tokens']}")
-print(f"Compressed Tokens: {result['compressed_tokens']}")
-print(f"Compression Ratio: {result['ratio']} (Targeted 0.33)")
-print(f"Estimated API Savings: {result['saving']}")
+    print("\n--- Optimization Metrics ---")
+    print(f"Original Tokens: {result['origin_tokens']}")
+    print(f"Compressed Tokens: {result['compressed_tokens']}")
+    print(f"Compression Ratio: {result['ratio']} (Targeted 0.33)")
+    print(f"Estimated API Savings: {result['saving']}")
 ```
 
 ## Quick Start: Rust
@@ -101,9 +105,9 @@ cargo add context-sanitizer
 ### Usage
 
 ```rust
-use context_sanitizer::SanitizerEngine;
+use context_sanitizer::{SanitizerEngine, Decision};
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let engine = SanitizerEngine::new();
     
     let dirty_payload = r#"
@@ -113,10 +117,17 @@ fn main() {
         }
     "#;
     
-    // Scans for secrets and compresses repetitive tokens
-    let safe_payload = engine.process(dirty_payload);
-    
-    println!("Safe Payload: {}", safe_payload);
+    // Inspects payload for secrets, applies semantic guardrails, and compresses tokens
+    match engine.inspect(dirty_payload) {
+        Decision::Allowed(safe_payload) => {
+            println!("Safe Payload:\n{}", safe_payload.content);
+        }
+        Decision::Blocked(violation) => {
+            eprintln!("⚠️ Security Alert: Payload blocked! [{}] {}", violation.category, violation.reason);
+        }
+    }
+
+    Ok(())
 }
 ```
 
