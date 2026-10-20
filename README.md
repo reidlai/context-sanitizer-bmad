@@ -342,6 +342,33 @@ Copy or symlink the compiled shared object to your working directory or `PYTHONP
 * **macOS:** `cp target/release/libcontext_sanitizer.dylib ./context_sanitizer.so`
 * **Windows:** `copy target\release\context_sanitizer.dll .\context_sanitizer.pyd`
 
+## Contributing
+
+Contributions are welcome! Direct pushes to the `main` branch are restricted to maintain codebase stability and strict security invariants. All contributors must follow the standard Fork & Pull Request workflow.
+
+### Pull Request Workflow
+
+1. **Fork the Repository:** Create your personal fork at [github.com/reidlai/context-sanitizer](https://github.com/reidlai/context-sanitizer).
+2. **Create a Feature Branch:**
+   ```bash
+   git clone https://github.com/<your-username>/context-sanitizer.git
+   cd context-sanitizer
+   git checkout -b feature/your-feature-name
+   ```
+3. **Validate Changes:** Ensure all test suites, formatting, and lints pass:
+   ```bash
+   cargo test --workspace
+   cargo fmt --check
+   cargo clippy --workspace --all-targets -- -D warnings
+   ```
+4. **Submit a Pull Request (PR):**
+   * Push your feature branch to your personal fork.
+   * Open a PR against `reidlai/context-sanitizer:main`.
+   * Detail your changes, rationale, and verification steps in the PR description.
+5. **Review & Merge:**
+   * Every PR will be inspected by an AI review agent and the repository maintainer for correctness, security bounds, and test fidelity.
+   * Feedback will be shared in the PR review comments, and the branch will be merged once approved.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
