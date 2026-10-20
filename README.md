@@ -369,6 +369,14 @@ Contributions are welcome! Direct pushes to the `main` branch are restricted to 
    * Every PR will be inspected by an AI review agent and the repository maintainer for correctness, security bounds, and test fidelity.
    * Feedback will be shared in the PR review comments, and the branch will be merged once approved.
 
+### Reporting Issues
+
+Encountered a bug, security vulnerability, or have an idea for a new feature? Please [open an issue](https://github.com/reidlai/context-sanitizer/issues/new/choose) using our standardized GitHub Issue Templates:
+
+* 🐛 **[Bug Report](https://github.com/reidlai/context-sanitizer/issues/new?template=bug_report.yml):** For reporting unexpected panics, compression defects, or runtime crashes.
+* 💡 **[Feature Request](https://github.com/reidlai/context-sanitizer/issues/new?template=feature_request.yml):** For proposing new regex detectors, System One encoder models, or agent framework integrations.
+* 🛡️ **[Security Vulnerability](https://github.com/reidlai/context-sanitizer/issues/new?template=security_report.yml):** For reporting secret detector bypasses, false negatives in proprietary data detection, or guardrail escapes.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
