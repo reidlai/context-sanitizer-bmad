@@ -120,6 +120,97 @@ fn main() {
 }
 ```
 
+## Agentic AI Integrations
+
+Modern Agentic workflows suffer from **context rot** (token bloat from recursive loops and large tool schemas) and **secret exposure** (leaking API keys from command/tool outputs). `context-sanitizer` fits directly into agent loops in both Python and Rust.
+
+### Python: LangGraph Integration
+
+Intercept and compress message history and tool outputs inside a LangGraph `StateGraph` node before calling the LLM:
+
+```python
+from typing import TypedDict, List
+from langchain_core.messages import BaseMessage
+from langgraph.graph import StateGraph, END
+from context_sanitizer import PromptSanitizer
+
+# 1. Define Agent State
+class AgentState(TypedDict):
+    messages: List[BaseMessage]
+    clean_prompt: str
+
+# 2. Initialize context-sanitizer
+sanitizer = PromptSanitizer(
+    use_system_one_guard=True,     # Block semantic leaks & malicious prompt injections
+    use_ml_compression=True,       # Enable token classification pruning
+    target_compression_rate=0.40   # Compress down to 40% of original tokens
+)
+
+# 3. Node: Sanitize and Compress Context
+def sanitize_node(state: AgentState):
+    # Formulate accumulated conversation and tool execution history
+    raw_context = "\n".join(f"{m.type}: {m.content}" for m in state["messages"])
+    
+    # Intercept credentials, strip schema bloat, and compress
+    result = sanitizer.sanitize_and_compress(raw_context)
+    
+    return {"clean_prompt": result["compressed_prompt"]}
+
+# 4. Node: Call Model
+def call_model_node(state: AgentState):
+    # Model receives concise, credential-free prompt
+    response = llm.invoke(state["clean_prompt"])
+    return {"messages": state["messages"] + [response]}
+
+# 5. Build Graph
+workflow = StateGraph(AgentState)
+workflow.add_node("sanitize", sanitize_node)
+workflow.add_node("agent", call_model_node)
+workflow.set_entry_point("sanitize")
+workflow.add_edge("sanitize", "agent")
+workflow.add_edge("agent", END)
+
+app = workflow.compile()
+```
+
+### Rust: Rig Integration
+
+In Rust-based agents built with [Rig](https://github.com/0xPlaygrounds/rig), use `SanitizerEngine` to scrub runtime tool outputs and stale context before prompting the agent:
+
+```rust
+use context_sanitizer::SanitizerEngine;
+use rig::providers::openai::{self, GPT_4O};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = openai::Client::from_env();
+    let sanitizer = SanitizerEngine::new();
+
+    // Raw, bloated payload from multi-step tool calls and terminal executions
+    let dirty_tool_output = r#"
+        System: Executing cloud resource audit...
+        Tool [bash]: AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+        Tool [db_query]: {"columns": ["id", "pii_ssn", "name"], "rows": [["1", "000-12-3456", "Alice"]]}
+        Status: Finished query with redundant whitespace and repetitive log lines.
+    "#;
+
+    // 1. Scrub credentials and prune token bloat in sub-millisecond Rust execution
+    let safe_context = sanitizer.process(dirty_tool_output);
+
+    // 2. Build Rig Agent
+    let agent = client
+        .agent(GPT_4O)
+        .preamble("You are an autonomous cloud infrastructure engineer.")
+        .build();
+
+    // 3. Prompt agent with protected, compressed payload
+    let response = agent.prompt(&safe_context).await?;
+    println!("Rig Agent Response:\n{}", response);
+
+    Ok(())
+}
+```
+
 ## Build from Source
 
 All components (pure Rust core, proxy binary, and Python bindings) are driven entirely through standard `cargo` workflows.
