@@ -66,7 +66,7 @@ dirty_prompt = """
 System: You are an AI assistant.
 User: Please check my code for the upcoming deployment. I am getting an error.
 Code: 
-AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_ACCESS_KEY_ID=XXXXXXXXXXXXXXXXXXXX
 function execute_deployment() {
     //  This is a   very    long     comment that explains nothing
     //  Project Alpha Launch Strategy: Unreleased Q4 Financials
@@ -113,7 +113,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dirty_payload = r#"
         {
             "role": "user",
-            "content": "My GitHub token is ghp_1234567890abcdef.    Please help   me."
+            "content": "My GitHub token is XXXXXXXXXXXXXXXXXXXX.    Please help   me."
         }
     "#;
     
