@@ -122,90 +122,143 @@ fn main() {
 
 ## Agentic AI Integrations
 
-Modern Agentic workflows suffer from **context rot** (token bloat from recursive loops and large tool schemas) and **secret exposure** (leaking API keys from command/tool outputs). `context-sanitizer` fits directly into agent loops in both Python and Rust.
+Modern Agentic workflows suffer from **context rot** (token bloat from recursive loops and verbose tool schemas) and **secret exposure** (leaking credentials or proprietary data from tool execution outputs). 
 
-### Python: LangGraph Integration
+`context-sanitizer` provides a **two-tier defense model**:
+1. **Soft Mitigation (Redaction & Masking):** Standard secrets (e.g., AWS keys, GitHub PATs) are sanitized in-place with `[REDACTED_*]` tokens so the agent can safely continue.
+2. **Hard Mitigation (Circuit Breaker & Quarantine):** When the System One firewall detects proprietary semantic leaks, jailbreaks, or fraud, it halts execution immediately—protecting sensitive IP and preventing costly third-party API calls.
 
-Intercept and compress message history and tool outputs inside a LangGraph `StateGraph` node before calling the LLM:
+| Scenario | System Action | Downstream LLM Invoked? |
+| :--- | :--- | :--- |
+| **Standard Keys / Credentials** | Masked with `[REDACTED_*]` tokens | **Yes** (Safe payload forwarded) |
+| **Token Bloat / Stale History** | Compressed lexically & neurally | **Yes** (Latency & cost reduced) |
+| **Proprietary Semantic Leaks** | Blocked with security reason | **No** (Halted locally before API call) |
+| **Prompt Injections / Fraud** | Quarantined to SecOps/SIEM | **No** (Zero inference cost incurred) |
+
+---
+
+### Python: LangGraph Integration (with Security Quarantine)
+
+Use LangGraph conditional edges (`add_conditional_edges`) to route execution to a `quarantine` node when severe security threats or semantic leaks are intercepted:
 
 ```python
-from typing import TypedDict, List
-from langchain_core.messages import BaseMessage
+from typing import TypedDict, List, Optional
+from langchain_core.messages import BaseMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from context_sanitizer import PromptSanitizer
 
-# 1. Define Agent State
+# 1. Define Agent State with Security Flags
 class AgentState(TypedDict):
     messages: List[BaseMessage]
-    clean_prompt: str
+    clean_prompt: Optional[str]
+    is_blocked: bool
+    rejection_reason: Optional[str]
 
-# 2. Initialize context-sanitizer
+# 2. Initialize with System One Guardrails
 sanitizer = PromptSanitizer(
-    use_system_one_guard=True,     # Block semantic leaks & malicious prompt injections
-    use_ml_compression=True,       # Enable token classification pruning
-    target_compression_rate=0.40   # Compress down to 40% of original tokens
+    use_system_one_guard=True,
+    blocked_categories=["PROPRIETARY_IP", "UNRELEASED_FINANCIALS", "PROMPT_INJECTION"],
+    hard_block_on_threat=True,
+    target_compression_rate=0.40
 )
 
-# 3. Node: Sanitize and Compress Context
+# 3. Node: Sanitize, Compress, and Evaluate Threat Level
 def sanitize_node(state: AgentState):
-    # Formulate accumulated conversation and tool execution history
     raw_context = "\n".join(f"{m.type}: {m.content}" for m in state["messages"])
-    
-    # Intercept credentials, strip schema bloat, and compress
     result = sanitizer.sanitize_and_compress(raw_context)
     
-    return {"clean_prompt": result["compressed_prompt"]}
+    # Check if System One Firewall tripped a hard block
+    if result.get("status") == "blocked":
+        return {
+            "is_blocked": True,
+            "rejection_reason": result["reason"]
+        }
+        
+    return {
+        "clean_prompt": result["compressed_prompt"],
+        "is_blocked": False
+    }
 
-# 4. Node: Call Model
+# 4. Node: Security Quarantine (Circuit Breaker - No LLM Call)
+def quarantine_node(state: AgentState):
+    # Log to SIEM / SecOps and safely alert user without API invocation
+    alert_msg = f"Security Policy Violation: {state['rejection_reason']}"
+    return {"messages": state["messages"] + [AIMessage(content=alert_msg)]}
+
+# 5. Node: Standard Model Execution
 def call_model_node(state: AgentState):
-    # Model receives concise, credential-free prompt
     response = llm.invoke(state["clean_prompt"])
     return {"messages": state["messages"] + [response]}
 
-# 5. Build Graph
+# 6. Build Conditional State Graph
+def route_after_sanitization(state: AgentState) -> str:
+    return "quarantine" if state["is_blocked"] else "agent"
+
 workflow = StateGraph(AgentState)
 workflow.add_node("sanitize", sanitize_node)
+workflow.add_node("quarantine", quarantine_node)
 workflow.add_node("agent", call_model_node)
+
 workflow.set_entry_point("sanitize")
-workflow.add_edge("sanitize", "agent")
+workflow.add_conditional_edges(
+    "sanitize",
+    route_after_sanitization,
+    {
+        "quarantine": "quarantine",
+        "agent": "agent"
+    }
+)
+workflow.add_edge("quarantine", END)
 workflow.add_edge("agent", END)
 
 app = workflow.compile()
 ```
 
-### Rust: Rig Integration
+---
 
-In Rust-based agents built with [Rig](https://github.com/0xPlaygrounds/rig), use `SanitizerEngine` to scrub runtime tool outputs and stale context before prompting the agent:
+### Rust: Rig Integration (Circuit Breaker Pattern)
+
+In Rust-based agents built with [Rig](https://github.com/0xPlaygrounds/rig), use `Decision` matching to prevent tainted or malicious tool outputs from reaching the LLM:
 
 ```rust
-use context_sanitizer::SanitizerEngine;
+use context_sanitizer::{SanitizerEngine, Decision, SecurityViolation};
 use rig::providers::openai::{self, GPT_4O};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = openai::Client::from_env();
-    let sanitizer = SanitizerEngine::new();
+    let engine = SanitizerEngine::new();
 
-    // Raw, bloated payload from multi-step tool calls and terminal executions
+    // Raw payload from runtime tool execution containing confidential data
     let dirty_tool_output = r#"
-        System: Executing cloud resource audit...
+        System: Executing cloud audit...
         Tool [bash]: AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-        Tool [db_query]: {"columns": ["id", "pii_ssn", "name"], "rows": [["1", "000-12-3456", "Alice"]]}
-        Status: Finished query with redundant whitespace and repetitive log lines.
+        Tool [files]: Confidential Q4 Unreleased Financial Forecasts for Project Alpha.
     "#;
 
-    // 1. Scrub credentials and prune token bloat in sub-millisecond Rust execution
-    let safe_context = sanitizer.process(dirty_tool_output);
+    // Evaluate input through the System One firewall & secret engine
+    match engine.inspect(dirty_tool_output) {
+        Decision::Allowed(clean_payload) => {
+            // Forward sanitized & compressed context to Rig agent
+            let agent = client
+                .agent(GPT_4O)
+                .preamble("You are a secure cloud infrastructure assistant.")
+                .build();
 
-    // 2. Build Rig Agent
-    let agent = client
-        .agent(GPT_4O)
-        .preamble("You are an autonomous cloud infrastructure engineer.")
-        .build();
+            let response = agent.prompt(&clean_payload.content).await?;
+            println!("Rig Agent Response:\n{}", response);
+        }
+        Decision::Blocked(violation) => {
+            // Hard circuit breaker triggered: DO NOT call the LLM
+            eprintln!(
+                "CRITICAL SECURITY ALERT: Blocked violation [{}] -> {}",
+                violation.category, violation.reason
+            );
 
-    // 3. Prompt agent with protected, compressed payload
-    let response = agent.prompt(&safe_context).await?;
-    println!("Rig Agent Response:\n{}", response);
+            // Log incident to SIEM / abort execution safely
+            return Err(format!("Halted: {}", violation.reason).into());
+        }
+    }
 
     Ok(())
 }
