@@ -1,0 +1,14 @@
+[
+  {"claim": "LLMLingua-2 (Pan et al., ACL Findings 2024) bidirectional encoder token classification", "class": "canon", "pub_date": "2024-08"},
+  {"claim": "LLMLingua-2 3x-6x speedup and 1.6x-2.9x end-to-end latency reduction", "class": "benchmark", "pub_date": "2024-08"},
+  {"claim": "Prompt Compression Survey (Li et al., NAACL 2025) hard vs soft compression taxonomy", "class": "canon", "pub_date": "2024-10"},
+  {"claim": "Selective Context (Li et al., EMNLP 2023) requires causal LM for conditional self-information", "class": "method", "pub_date": "2023-12"},
+  {"claim": "RECOMP (Xu et al., ICLR 2024) uses trained dual-encoder and T5-Large compressors", "class": "method", "pub_date": "2024-01"},
+  {"claim": "Lin & Bilmes (ACL 2011) budgeted submodular extractive summarization", "class": "canon", "pub_date": "2011-06"},
+  {"claim": "DeBERTaV3 (He, Gao, & Chen, ICLR 2023) RTD + GDES architecture", "class": "canon", "pub_date": "2023-01"},
+  {"claim": "Meta Llama Prompt Guard 2 (86M & 22M) sequence classifiers on Hugging Face", "class": "model", "pub_date": "2025-04"},
+  {"claim": "ModernBERT (Warner et al., Dec 2024) 8,192-token encoder", "class": "model", "pub_date": "2024-12"},
+  {"claim": "MoritzLaurer DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary & zeroshot-v1.1-all-33 HF IDs", "class": "version", "pub_date": "2024-02"},
+  {"claim": "microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank HF ID", "class": "version", "pub_date": "2024-03"},
+  {"claim": "candle-transformers native support for bert, debertav2, and modernbert", "class": "version", "pub_date": "2025-02"}
+]
