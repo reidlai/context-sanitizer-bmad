@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Recon Briefing: Quoted Research Review (context-sanitizer)</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --muted: #475569;
+    --border: #e2e8f0;
+    --accent: #2563eb;
+    --verified-bg: #dcfce7;
+    --verified-fg: #166534;
+    --overturned-bg: #fee2e2;
+    --overturned-fg: #991b1b;
+    --warn-bg: #fef3c7;
+    --warn-fg: #92400e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --border: #334155;
+      --accent: #60a5fa;
+      --verified-bg: #064e3b;
+      --verified-fg: #a7f3d0;
+      --overturned-bg: #7f1d1d;
+      --overturned-fg: #fecaca;
+      --warn-bg: #78350f;
+      --warn-fg: #fde68a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .layout {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 2rem;
+  }
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; }
+  }
+  header.hero {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+  }
+  header.hero h1 { margin: 0 0 0.5rem; font-size: 1.6rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.875rem; color: var(--muted); }
+  .meta span { background: var(--bg); padding: 0.25rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); }
+  nav.toc {
+    position: sticky;
+    top: 1.5rem;
+    align-self: start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    font-size: 0.9rem;
+  }
+  nav.toc h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+  nav.toc ul { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 0.4rem 0; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  main { display: flex; flex-direction: column; gap: 1.5rem; }
+  section.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+  }
+  section.card h2 { margin-top: 0; font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  .badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-right: 0.35rem;
+  }
+  .badge.verified { background: var(--verified-bg); color: var(--verified-fg); }
+  .badge.overturned { background: var(--overturned-bg); color: var(--overturned-fg); border: 1px solid var(--overturned-fg); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; background: var(--bg); padding: 0.12rem 0.35rem; border-radius: 4px; }
+  a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.75rem; }
+  th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  details summary { cursor: pointer; font-weight: 600; padding: 0.5rem 0; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <header class="hero">
+    <h1>Academic &amp; Technical Literature Audit: <code>context-sanitizer</code></h1>
+    <p><strong>Decision:</strong> Validate, correct, or tighten all academic citations, benchmark numbers, mathematical formulations, and Hugging Face checkpoint IDs in <code>README.md</code>, <code>brainstorm-intent.md</code>, and <code>forged-idea.md</code> before authoring <code>SPEC.md</code>.</p>
+    <div class="meta">
+      <span>Type: <strong>academic-lit</strong></span>
+      <span>Date: <strong>2026-10-21</strong></span>
+      <span>Preset: <strong>standard (depth 2)</strong></span>
+      <span>Validation: <strong>normal</strong></span>
+      <span>Verified: <strong>9 claims</strong></span>
+      <span>Overturned: <strong>3 claims</strong></span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ul>
+      <li><a href="#exec-summary">Executive Summary</a></li>
+      <li><a href="#d1">D1: LLMLingua-2 &amp; Survey</a></li>
+      <li><a href="#d2">D2: Selective Context &amp; RECOMP</a></li>
+      <li><a href="#d3">D3: System One Encoders</a></li>
+      <li><a href="#d4">D4: HF IDs &amp; Rust Candle</a></li>
+      <li><a href="#cross">Cross-Dimension Insights</a></li>
+      <li><a href="#recs">Recommendations</a></li>
+      <li><a href="#sources">Source Appendix</a></li>
+      <li><a href="#staleness">Staleness Map</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section class="card" id="exec-summary">
+      <h2>Executive Summary</h2>
+      <p><strong>Verdict:</strong> The architectural core of <code>context-sanitizer</code> is strongly grounded in peer-reviewed research (<span class="badge verified">9 Verified</span>), <strong>but 3 load-bearing claims in <code>README.md</code> are overturned (<span class="badge overturned">3 Overturned</span>) by primary-source and authenticated Hugging Face Hub checks and should be fixed before writing <code>SPEC.md</code>:</strong></p>
+      <ol>
+        <li><span class="badge overturned">Overturned (HTTP 404)</span> <strong><code>guard_model_id</code> in <code>README.md</code> (Lines 117, 177, 248, 325):</strong> <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli</code> returns <code>HTTP 404 Not Found</code> on Hugging Face Hub <a href="#src-10">[10]</a>. The <code>-wanli</code> suffix exists only on <code>large</code> (<code>MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli</code>). Valid checkpoints built on <code>microsoft/deberta-v3-base</code> / <code>xsmall</code> <a href="#src-7">[7]</a> are <code>MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli</code> (467k downloads), <code>MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33</code> (42.9k downloads), and <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary</code> <a href="#src-10">[10]</a>.</li>
+        <li><span class="badge overturned">Overturned Attribution</span> <strong>Tier 2 Zero-Weight Attribution to <em>Selective Context</em> &amp; <em>RECOMP</em> (<code>README.md</code> Line 48):</strong> <em>Selective Context</em> (Li et al., EMNLP 2023) requires a causal LM (GPT-2/OPT/LLaMA) to compute conditional self-information $I(x_t) = -\log_2 P(x_t \mid x_{&lt;t})$ <a href="#src-4">[4]</a>, and <em>RECOMP</em> (Xu et al., ICLR 2024) trains neural dual-encoder and T5-Large compressors rather than submodular functions <a href="#src-5">[5]</a>. Tier 2's 0-weight engine is inspired by them, while its actual 0-weight math rests on static unigram self-information/IDF, Okapi BM25, and budgeted submodular selection (Lin &amp; Bilmes, ACL 2011) <a href="#src-6">[6]</a>.</li>
+        <li><span class="badge warn">Clarification</span> <strong>"System One Inference for Bounded Semantic Reasoning" (<code>README.md</code> Line 46):</strong> This is an original architectural concept (combining Kahneman's System 1 fast thinking with encoder models like <code>microsoft/deberta-v3-base</code> <a href="#src-7">[7]</a>, <code>Llama-Prompt-Guard-2</code> <a href="#src-8">[8]</a>, and <code>ModernBERT</code> <a href="#src-9">[9]</a>), not a paper title.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="d1">
+      <h2>Dimension 1: Prompt Compression Papers &amp; Benchmarks</h2>
+      <ul>
+        <li><span class="badge verified">Verified (High)</span> <strong>LLMLingua-2 (Pan et al., ACL Findings 2024):</strong> Formulates task-agnostic prompt compression as bidirectional encoder token classification ($p(\text{preserve})$) via GPT-4 data distillation <a href="#src-1">[1]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>Speedup &amp; Latency Numbers:</strong> Achieves <strong>3x–6x faster compression</strong> than perplexity-based methods and accelerates end-to-end latency by <strong>1.6x–2.9x</strong> at 2x–5x compression ratios <a href="#src-2">[2]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>Prompt Compression Survey (Zongqian Li et al., 2024 / NAACL 2025):</strong> Establishes the canonical taxonomy dividing methods into <strong>hard prompt compression</strong> (discrete token removal) and <strong>soft prompt compression</strong> (continuous vectors) <a href="#src-3">[3]</a>.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="d2">
+      <h2>Dimension 2: Information-Theoretic &amp; Query-Aware Pruning</h2>
+      <ul>
+        <li><span class="badge overturned">Overturned as 0-Weight</span> <strong>Selective Context (Yucheng Li et al., EMNLP 2023):</strong> Evaluates conditional self-information $I(x_t) = -\log_2 P(x_t \mid x_{&lt;t})$ using a causal language model (GPT-2/OPT/LLaMA), whereas Tier 2's 0-weight engine computes static unigram self-information / IDF <a href="#src-4">[4]</a>.</li>
+        <li><span class="badge overturned">Overturned Attribution</span> <strong>RECOMP (Fangyuan Xu et al., ICLR 2024):</strong> Uses trained contrastive dual-encoder and T5-Large compressors, not submodular chunk selection <a href="#src-5">[5]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>Lin &amp; Bilmes (ACL-HLT 2011) &amp; Okapi BM25 (Robertson &amp; Zaragoza, 2009):</strong> Canonical foundations for budgeted monotone submodular extractive summarization with a $(1 - 1/e)$ greedy guarantee <a href="#src-6">[6]</a> and query-aware lexical scoring.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="d3">
+      <h2>Dimension 3: System One Security Encoders</h2>
+      <ul>
+        <li><span class="badge verified">Verified (High)</span> <strong>DeBERTaV3 (He, Gao, &amp; Chen, ICLR 2023; <code>microsoft/deberta-v3-base</code>):</strong> Introduces Replaced Token Detection (RTD) with Gradient-Disentangled Embedding Sharing (GDES), achieving 91.37% on GLUE <a href="#src-7">[7]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>Meta Llama Prompt Guard 2:</strong> Provides <code>meta-llama/Llama-Prompt-Guard-2-86M</code> (<code>mDeBERTa-v3-base</code>) and <code>meta-llama/Llama-Prompt-Guard-2-22M</code> (<code>DeBERTa-v3-xsmall</code>, ~75% lower latency) for prompt-injection and jailbreak detection <a href="#src-8">[8]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>ModernBERT (Warner et al., Dec 2024):</strong> <code>answerdotai/ModernBERT-base</code> supports an 8,192-token context window with RoPE and GeGLU <a href="#src-9">[9]</a>.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="d4">
+      <h2>Dimension 4: Hugging Face Checkpoint IDs &amp; Rust ML Compatibility</h2>
+      <ul>
+        <li><span class="badge overturned">Overturned (HTTP 404)</span> <strong><code>MoritzLaurer</code> Checkpoint Audit:</strong> Authenticated HF Hub API checks show <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli</code> returns <code>404 Not Found</code>. Valid checkpoints are <code>MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli</code> (467k downloads), <code>MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33</code> (42.9k downloads), <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary</code> (7.8k downloads), and <code>MoritzLaurer/DeBERTa-v3-large-mnli-fever-anli-ling-wanli</code> (137k downloads) <a href="#src-10">[10]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>LLMLingua-2 Checkpoints:</strong> <code>microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank</code> and <code>microsoft/llmlingua-2-xlm-roberta-large-meetingbank</code> return <code>HTTP 200</code> <a href="#src-11">[11]</a>.</li>
+        <li><span class="badge verified">Verified (High)</span> <strong>Rust <code>candle-transformers</code> Support:</strong> Natively implements <code>bert</code>, <code>debertav2</code> (loads DeBERTa-v3 checkpoints), and <code>modernbert</code> <a href="#src-12">[12]</a>.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="cross">
+      <h2>Cross-Dimension Insights</h2>
+      <ul>
+        <li><strong>512-Token Window Limit on DeBERTa-v3 &amp; BERT vs. 8,192 on ModernBERT:</strong> Both <code>microsoft/deberta-v3-base</code> <a href="#src-7">[7]</a> (and derivatives <a href="#src-8">[8]</a><a href="#src-10">[10]</a>) and <code>bert-base-multilingual-cased</code> <a href="#src-11">[11]</a> require $\le 512$-token chunking/striding in Tier 3, whereas <code>ModernBERT</code> supports 8,192 tokens natively <a href="#src-9">[9]</a>.</li>
+        <li><strong>Forge Decision Vindicated:</strong> Killing the "Shared-Backbone Multi-Head Model" in <code>forged-idea.md</code> is confirmed by incompatible tokenizers and backbones between <code>DeBERTa-v3</code> (SentencePiece 128k) and <code>LLMLingua-2</code> (WordPiece 119k / XLM-R 250k) <a href="#src-7">[7]</a><a href="#src-11">[11]</a>.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="recs">
+      <h2>Recommendations (Downstream Bindings)</h2>
+      <ol>
+        <li><strong><code>README.md</code> &amp; <code>SPEC.md</code> Default <code>guard_model_id</code>:</strong> Replace <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli</code> (<code>404</code>) with <code>MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33</code>, <code>MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary</code>, or <code>MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli</code> <a href="#src-10">[10]</a>.</li>
+        <li><strong><code>README.md</code> Research Foundation Section:</strong> Cite He et al. (ICLR 2023, <code>microsoft/deberta-v3-base</code>) <a href="#src-7">[7]</a> and Lin &amp; Bilmes (ACL 2011) <a href="#src-6">[6]</a>, and clarify that Tier 2 is a 0-weight statistical approximation inspired by <em>Selective Context</em> <a href="#src-4">[4]</a> and <em>RECOMP</em> <a href="#src-5">[5]</a>.</li>
+        <li><strong><code>SPEC.md</code> Tier 3 Chunking Invariant:</strong> Enforce $\le 512$-token sentence-aligned chunking for <code>DeBERTa-v3</code> and <code>BERT</code> checkpoints.</li>
+      </ol>
+    </section>
+
+    <section class="card" id="sources">
+      <details open>
+        <summary>Source Appendix (12 Primary Sources)</summary>
+        <table class="sources"><tbody><tr id="src-1"><td>[1]</td><td>*LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression* (Pan et al., ACL Findings 2024) bidirectional encoder token classification formulation</td><td><a href="https://aclanthology.org/2024.findings-acl.57/" target="_blank" rel="noopener">ACL Anthology / arXiv:2403.12968</a></td><td>2024-08</td><td>2026-10-21</td><td>high</td></tr><tr id="src-2"><td>[2]</td><td>LLMLingua-2 achieves 3x–6x faster compression and 1.6x–2.9x end-to-end latency speedup at 2x–5x compression ratios</td><td><a href="https://arxiv.org/abs/2403.12968" target="_blank" rel="noopener">arXiv:2403.12968</a></td><td>2024-08</td><td>2026-10-21</td><td>high</td></tr><tr id="src-3"><td>[3]</td><td>*Prompt Compression for Large Language Models: A Survey* (Zongqian Li et al., 2024/NAACL 2025) hard vs. soft prompt compression taxonomy</td><td><a href="https://arxiv.org/abs/2410.12388" target="_blank" rel="noopener">arXiv:2410.12388</a></td><td>2024-10</td><td>2026-10-21</td><td>high</td></tr><tr id="src-4"><td>[4]</td><td>*Selective Context* (Yucheng Li et al., EMNLP 2023) computes conditional self-information $I(x_t) = -\log_2 P(x_t \mid x_{&lt;t})$ using a causal LM (GPT-2/OPT/LLaMA), not zero-weight static lookup</td><td><a href="https://aclanthology.org/2023.emnlp-main.391/" target="_blank" rel="noopener">ACL Anthology (EMNLP 2023)</a></td><td>2023-12</td><td>2026-10-21</td><td>high</td></tr><tr id="src-5"><td>[5]</td><td>*RECOMP: Improving Retrieval-Augmented LMs with Context Compression and Selective Augmentation* (Xu et al., ICLR 2024) uses trained dual-encoder and T5-Large compressors, not submodular selection</td><td><a href="https://openreview.net/forum?id=mlJLVigNHp" target="_blank" rel="noopener">OpenReview (ICLR 2024)</a></td><td>2024-01</td><td>2026-10-21</td><td>high</td></tr><tr id="src-6"><td>[6]</td><td>*A Class of Submodular Functions for Document Summarization* (Lin &amp; Bilmes, ACL-HLT 2011) establishes budgeted submodular extractive selection with $(1 - 1/e)$ greedy guarantee</td><td><a href="https://aclanthology.org/P11-1052/" target="_blank" rel="noopener">ACL Anthology (ACL 2011)</a></td><td>2011-06</td><td>2026-10-21</td><td>high</td></tr><tr id="src-7"><td>[7]</td><td>*DeBERTaV3: Improving DeBERTa using ELECTRA-Style Pre-Training with Gradient-Disentangled Embedding Sharing* (He, Gao, &amp; Chen, ICLR 2023; `microsoft/deberta-v3-base`)</td><td><a href="https://huggingface.co/microsoft/deberta-v3-base" target="_blank" rel="noopener">Hugging Face / OpenReview</a></td><td>2023-01</td><td>2026-10-21</td><td>high</td></tr><tr id="src-8"><td>[8]</td><td>*Meta Llama Prompt Guard 2* (`Llama-Prompt-Guard-2-86M` &amp; `Llama-Prompt-Guard-2-22M`) DeBERTa-v3 sequence classifiers for prompt injection and jailbreak detection</td><td><a href="https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M" target="_blank" rel="noopener">Hugging Face Hub (Meta)</a></td><td>2025-04</td><td>2026-10-21</td><td>high</td></tr><tr id="src-9"><td>[9]</td><td>*ModernBERT* (Warner et al., Dec 2024, `arXiv:2412.13663`) 8,192-token bidirectional encoder with RoPE and GeGLU (`answerdotai/ModernBERT-base`)</td><td><a href="https://arxiv.org/abs/2412.13663" target="_blank" rel="noopener">arXiv:2412.13663</a></td><td>2024-12</td><td>2026-10-21</td><td>high</td></tr><tr id="src-10"><td>[10]</td><td>Authenticated Hugging Face Hub API verification of `MoritzLaurer` `DeBERTa-v3` checkpoints (`-xsmall-...-wanli` returns 404; valid models are `deberta-v3-xsmall-zeroshot-v1.1-all-33`, `DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary`, `DeBERTa-v3-base-mnli-fever-anli`, `DeBERTa-v3-large-mnli-fever-anli-ling-wanli`)</td><td><a href="https://huggingface.co/MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33" target="_blank" rel="noopener">Hugging Face Hub (MoritzLaurer)</a></td><td>2024-02</td><td>2026-10-21</td><td>high</td></tr><tr id="src-11"><td>[11]</td><td>Official LLMLingua-2 Hugging Face checkpoints (`microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank` &amp; `microsoft/llmlingua-2-xlm-roberta-large-meetingbank`) verified HTTP 200</td><td><a href="https://huggingface.co/microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank" target="_blank" rel="noopener">Hugging Face Hub (Microsoft)</a></td><td>2024-03</td><td>2026-10-21</td><td>high</td></tr><tr id="src-12"><td>[12]</td><td>Rust `candle-transformers` native support for `bert`, `debertav2` (covering DeBERTa-v3), and `modernbert`</td><td><a href="https://docs.rs/candle-transformers/latest/candle_transformers/models/index.html" target="_blank" rel="noopener">docs.rs (candle-transformers)</a></td><td>2025-02</td><td>2026-10-21</td><td>high</td></tr></tbody></table>
+      </details>
+    </section>
+
+    <section class="card" id="staleness">
+      <h2>Staleness Map</h2>
+      <p>Live Hugging Face Hub and <code>crates.io</code> (<code>version</code> class, 1-month freshness window) were verified live on <code>2026-10-21</code>; next recommended Refresh is <code>2026-11-21</code>.</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>

@@ -43,10 +43,10 @@ Incoming CopilotUI / OpenAI API / Agent Payload
 
 This project implements state-of-the-art token pruning and semantic architectures based on recent publicly available research in context engineering:
 
-* **System One Inference for Bounded Semantic Reasoning**: Shifts away from sequential token generation, allowing non-autoregressive, encoder-only architectures (like Microsoft's DeBERTa-v3 and Meta's Prompt Guard) to compute text semantics and detect indirect prompt/code injections in a single pass for near-zero-latency safety checks.
-* **LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression (ACL 2024)**: Microsoft's research formulates prompt compression as a token classification problem ($p(\text{keep})$). Using a bidirectional encoder, it achieves 3x-6x faster compression and accelerates end-to-end latency by 1.6x-2.9x while preserving downstream accuracy.
-* **Selective Context & Query-Aware Submodular Pruning (RECOMP / Self-Information)**: Grounds our zero-weight Pure-Rust Tier 2 engine in information theory ($I(x) = -\log P(x)$) and query-aware BM25/submodular chunk selection to prune low-entropy filler tokens without requiring GPU weights.
-* **Prompt Compression for Large Language Models: A Survey (2024)**: Establishes the academic taxonomy of prompt compression, dividing the field into "hard" compression (discrete token removal/pruning) and "soft" compression (trainable continuous vectors).
+* **System One Encoder Gatekeepers (*DeBERTaV3*, He et al., ICLR 2023; *Meta Llama Prompt Guard 2*, 2025; *ModernBERT*, Warner et al., 2024)**: Shifts boundary safety away from slow sequential System 2 token generation (`arXiv:2111.09543`, `arXiv:2412.13663`). Non-autoregressive, bidirectional encoder architectures (`microsoft/deberta-v3-base`, `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`, `meta-llama/Llama-Prompt-Guard-2-22M` / `86M`, and `answerdotai/ModernBERT-base`) compute text semantics and detect indirect prompt/code injections in a single forward pass.
+* **LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression (Pan et al., ACL Findings 2024, `arXiv:2403.12968`)**: Microsoft Research's framework formulates prompt compression as a binary token classification problem ($p(\text{preserve})$). Using a bidirectional Transformer encoder (`microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank`), it achieves 3x–6x faster compression than perplexity-based methods and accelerates end-to-end latency by 1.6x–2.9x while preserving downstream accuracy.
+* **Zero-Weight Information-Theoretic & Submodular Pruning (*Selective Context*, Li et al., EMNLP 2023; *RECOMP*, Xu et al., ICLR 2024; *Lin & Bilmes*, ACL 2011; *Robertson & Zaragoza*, 2009)**: Inspired by *Selective Context* (`arXiv:2310.06201`, which uses causal LM conditional self-information $I(x_t) = -\log_2 P(x_t \mid x_{<t})$) and *RECOMP* (`arXiv:2310.04408`, which uses trained compressors for selective RAG augmentation), our Pure-Rust Tier 2 engine replaces neural weights with **static unigram Shannon self-information / IDF** ($I(w) = -\log P_{\text{unigram}}(w)$), **Okapi BM25**, and **budgeted monotone submodular chunk selection** (Lin & Bilmes, ACL 2011, with a $(1 - 1/e)$ greedy guarantee) to prune low-entropy filler tokens with 0 MB of GPU/CPU model weights.
+* **Prompt Compression for Large Language Models: A Survey (Zongqian Li et al., 2024 / NAACL 2025, `arXiv:2410.12388`)**: Establishes the academic taxonomy of prompt compression, dividing the field into "hard" prompt compression (discrete token filtering/pruning) and "soft" prompt compression (trainable continuous embedding vectors).
 
 ## Development Methodology
 
@@ -114,7 +114,7 @@ from context_sanitizer import PromptSanitizer
 sanitizer = PromptSanitizer(
     use_system_one_guard=True,         # Enable local System One semantic firewall & routing
     use_ml_compression=True,           # Enable neural compression (Stage 3B)
-    guard_model_id="MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli", # Configurable!
+    guard_model_id="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli", # Configurable!
     compression_model_id="microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
     target_compression_rate=0.33,      # Target rate: keep ~33% of the original tokens
     force_tokens=['\n', '?']           # Ensure structural and interrogative tokens are never dropped
@@ -174,7 +174,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Configurable builder (swap Hugging Face or local model_id anytime)
     let engine = SanitizerEngine::builder()
         .with_target_compression_rate(0.35)
-        .with_guard_model("MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli")
+        .with_guard_model("MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli")
         .with_compressor_model("microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank")
         .build()?;
     
@@ -245,7 +245,7 @@ class AgentState(TypedDict):
 # 2. Initialize with Configurable System One Guardrails
 sanitizer = PromptSanitizer(
     use_system_one_guard=True,
-    guard_model_id="MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli",
+    guard_model_id="MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
     blocked_categories=["PROPRIETARY_IP", "UNRELEASED_FINANCIALS", "PROMPT_INJECTION"],
     hard_block_on_threat=True,
     target_compression_rate=0.40
@@ -322,7 +322,7 @@ use rig::providers::openai::{self, GPT_4O};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = openai::Client::from_env();
     let engine = SanitizerEngine::builder()
-        .with_guard_model("MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli")
+        .with_guard_model("MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli")
         .build()?;
 
     // Raw payload from runtime tool execution containing confidential data
