@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>context-sanitizer — Brainstorm Keepsake & Architecture Blueprint</title>
+  <style>
+    :root {
+      --bg: #080b11;
+      --panel: #0f1522;
+      --panel-alt: #131c2e;
+      --border: #23324d;
+      --text: #e6edf3;
+      --muted: #8b9bb4;
+      --rust: #f74c00;
+      --cyan: #38bdf8;
+      --green: #22c55e;
+      --gold: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 15% 0%, #152238 0%, var(--bg) 55%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+    .container { max-width: 1120px; margin: 0 auto; }
+    header {
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(247,76,0,0.12), rgba(56,189,248,0.08));
+      border-radius: 16px;
+      padding: 2.25rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .badge.rust { color: #ff8c5a; border-color: rgba(247,76,0,0.45); }
+    .badge.cyan { color: var(--cyan); border-color: rgba(56,189,248,0.45); }
+    .badge.green { color: var(--green); border-color: rgba(34,197,94,0.45); }
+    .badge.purple { color: #c084fc; border-color: rgba(168,85,247,0.45); }
+    h1 { font-size: 2.25rem; letter-spacing: -0.02em; margin-bottom: 0.6rem; }
+    .subtitle { color: var(--muted); font-size: 1.05rem; max-width: 850px; }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      margin-bottom: 1.75rem;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+    .section-title h2 { font-size: 1.35rem; color: #fff; }
+    .lens-tag {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      background: var(--panel-alt);
+      color: var(--cyan);
+      border: 1px solid var(--border);
+    }
+    /* Terminal X-Ray Preview */
+    .terminal {
+      background: #05070b;
+      border: 1px solid #2e4057;
+      border-radius: 12px;
+      overflow: hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+    }
+    .term-bar {
+      background: #101726;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid #23324d;
+    }
+    .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .dot.r { background: #ef4444; }
+    .dot.y { background: #f59e0b; }
+    .dot.g { background: #22c55e; }
+    .term-cmd { color: var(--muted); margin-left: 0.5rem; font-size: 0.82rem; }
+    .term-body { padding: 1.25rem; line-height: 1.7; }
+    .pruned {
+      color: #f87171;
+      text-decoration: line-through;
+      background: rgba(239,68,68,0.14);
+      padding: 0.05rem 0.3rem;
+      border-radius: 4px;
+    }
+    .shadow-tok {
+      color: #fbbf24;
+      background: rgba(245,158,11,0.16);
+      border: 1px solid rgba(245,158,11,0.4);
+      padding: 0.05rem 0.35rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .ast-lock {
+      color: #38bdf8;
+      border-bottom: 1px dashed rgba(56,189,248,0.6);
+    }
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px dashed #23324d;
+    }
+    .metric-card {
+      background: #0c121e;
+      border: 1px solid #1e2c42;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+    }
+    .metric-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; }
+    .metric-val { font-size: 1.15rem; font-weight: 700; color: var(--green); }
+    /* Pipeline Tiers */
+    .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .tier {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      position: relative;
+    }
+    .tier h3 { font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--cyan); }
+    .tier .latency {
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+      display: inline-block;
+    }
+    .tier ul { padding-left: 1.15rem; color: #cbd5e1; font-size: 0.92rem; }
+    .tier li { margin-bottom: 0.4rem; }
+    /* Idea Stream Cards */
+    .idea-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1rem; }
+    .idea-card {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem;
+    }
+    .idea-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .author {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .author.user { background: rgba(34,197,94,0.18); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+    .author.coach { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.35); }
+    .author.decision { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid rgba(245,158,11,0.45); }
+    .idea-card h4 { font-size: 1rem; margin-bottom: 0.4rem; color: #fff; }
+    .idea-card p { font-size: 0.88rem; color: var(--muted); }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge-row">
+        <span class="badge rust">Rust Crate + PyO3</span>
+        <span class="badge cyan">System One Gatekeeper</span>
+        <span class="badge green">LLMLingua-2 + Pure-Rust Pruning</span>
+        <span class="badge purple">BMad Brainstorming Session</span>
+      </div>
+      <h1>context-sanitizer — Architecture & Brainstorm Keepsake</h1>
+      <p class="subtitle">
+        Goal: Ground an open-source Rust &amp; Python library in cutting-edge context engineering and token compression papers to protect Copilot UIs / Agentic workflows from malicious code injections &amp; PII leaks while slashing token bloat.
+      </p>
+    </header>
+
+    <!-- Flagship Demo: Context X-Ray -->
+    <section class="section">
+      <div class="section-title">
+        <h2>Flagship Showcase: Context X-Ray CLI &amp; Visualizer</h2>
+        <span class="lens-tag">Lens 3: One Feature Only (Selected by Reid)</span>
+      </div>
+      <div class="terminal">
+        <div class="term-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+          <span class="term-cmd">$ context-sanitizer xray copilot_payload.json --rate 0.35 --shadow-vault</span>
+        </div>
+        <div class="term-body">
+          <div><strong style="color:#38bdf8">[Tier 1 | L0 SIMD + AST Guard]</strong> 3 PII/Secrets vaulted into Shadow Vault | 14 AST syntax tokens locked</div>
+          <div><strong style="color:#a855f7">[Tier 2 | L0.5 Pure-Rust Math]</strong> Pruned 1,420 low-entropy &amp; duplicate JSON tool schema tokens (BM25 + Self-Info)</div>
+          <div><strong style="color:#22c55e">[Tier 3 | L1 System One Guard]</strong> Threat Score: 0.02 (SAFE) | Route: <code>Code + CopilotChat</code></div>
+          <hr style="border:none;border-top:1px solid #1e293b;margin:0.85rem 0;" />
+          <div>
+            User: Please check login failure for <span class="shadow-tok">&lt;SHADOW:EMAIL_1&gt;</span> on server <span class="shadow-tok">&lt;SHADOW:IP_1&gt;</span>.<br/>
+            <span class="pruned">I am really hoping you can help me debug this upcoming deployment issue as soon as possible.</span><br/>
+            Code: <code>AWS_ACCESS_KEY_ID=<span class="shadow-tok">&lt;SHADOW:AWS_KEY_1&gt;</span></code><br/>
+            <span class="ast-lock">function execute_deployment() {</span><br/>
+            &nbsp;&nbsp;<span class="pruned">// This is a very long redundant comment that explains nothing to the model</span><br/>
+            &nbsp;&nbsp;<span class="ast-lock">return true;</span><br/>
+            <span class="ast-lock">}</span>
+          </div>
+          <div class="metrics-bar">
+            <div class="metric-card">
+              <div class="metric-label">Token Compression</div>
+              <div class="metric-val">3,200 &rarr; 1,088 (-66%)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">PII &amp; Tool Continuity</div>
+              <div class="metric-val" style="color:var(--gold)">3 Rehydratable Tokens</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">System One Security</div>
+              <div class="metric-val" style="color:var(--cyan)">0 Injections (0.02)</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Rust Execution Time</div>
+              <div class="metric-val">412 &mu;s (L0 + L0.5)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chosen Architecture Climax -->
+    <section class="section">
+      <div class="section-title">
+        <h2>The Converged 3-Tier Speculative Cascade</h2>
+        <span class="lens-tag">Lens 2: TRIZ Contradiction Resolution</span>
+      </div>
+      <div class="tiers">
+        <div class="tier">
+          <h3>Tier 1 (L0): Pure-Rust SIMD &amp; AST Guard</h3>
+          <span class="latency">&lt; 0.5 ms &bull; 0 MB Weights &bull; Always On</span>
+          <ul>
+            <li><strong>Copilot UI / OpenAI API Boundary:</strong> Intercepts malicious code injections &amp; user PII before hitting the agent framework.</li>
+            <li><strong>Two-Way Ephemeral Shadow Vault:</strong> Swaps PII/secrets into a Rust <code>DashMap</code> with TTL so cloud LLMs never see raw PII, then rehydrates values locally for tool calls.</li>
+            <li><strong><code>tree-sitter</code> AST Lock:</strong> Locks code &amp; JSON syntax tokens so pruning never corrupts valid code.</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>Tier 2 (L0.5): Pure-Rust Smart Statistical Pruning</h3>
+          <span class="latency">&lt; 2.0 ms &bull; 0 MB Weights &bull; Always On</span>
+          <ul>
+            <li><strong>Zero-Download Out-of-the-Box:</strong> <code>cargo add context-sanitizer</code> delivers 40–60% compression immediately with zero neural weights.</li>
+            <li><strong>Information-Theoretic Scoring:</strong> Uses <code>tiktoken-rs</code> + query-aware BM25, TF-IDF, and self-information entropy $I(x) = -\log P(x)$.</li>
+            <li><strong>JSON Tool Schema Minifier:</strong> Strips bloated MCP &amp; OpenAI <code>tools[]</code> descriptions in-flight.</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>Tier 3 (L1): Shared-Backbone System One ML</h3>
+          <span class="latency">Opt-in (--features ml) &bull; Int8 Quantized (~45 MB)</span>
+          <ul>
+            <li><strong>One Forward Pass, Three Heads:</strong> Runs DeBERTa-v3 / ModernBERT in Rust (<code>candle</code> / <code>ort</code>).</li>
+            <li><strong><code>[CLS]</code> Head:</strong> Blocks semantic IP leaks, prompt injections, &amp; routes payloads.</li>
+            <li><strong>Token Heads (LLMLingua-2):</strong> Computes token-level $p(\text{keep})$ and surgically excises adversarial spans.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full Session Idea Log -->
+    <section class="section">
+      <div class="section-title">
+        <h2>Brainstorming Harvest &amp; Attribution Log</h2>
+        <span class="lens-tag">Creative Partner Mode (Reid + Coach)</span>
+      </div>
+      <div class="idea-grid">
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author user">Idea by Reid</span>
+            <span class="lens-tag">Morphological</span>
+          </div>
+          <h4>System One Gatekeeper + Token Minimization</h4>
+          <p>Use fast single-pass System One models as a gatekeeper for Copilot and Agentic AI security leaks and hacking code detection first, then couple token minimization into the same pipeline.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author user">Idea by Reid</span>
+            <span class="lens-tag">Morphological</span>
+          </div>
+          <h4>Copilot UI / CopilotKit / OpenAI API Boundary</h4>
+          <p>Stop hackers from injecting malicious code through Copilot UI (CopilotKit or OpenAI API) into agentic frameworks, and prevent users from accidentally leaking personal information (PII).</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author decision">Decision by Reid</span>
+            <span class="lens-tag">TRIZ</span>
+          </div>
+          <h4>Two-Way Shadow Vault + 3-Tier Pipeline</h4>
+          <p>Adopt reversible PII placeholders so agent tool calls keep working after PII is hidden, paired with Pure-Rust smart compression by default + System One ML when enabled.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author decision">Decision by Reid</span>
+            <span class="lens-tag">One Feature Only</span>
+          </div>
+          <h4>Context X-Ray CLI &amp; Terminal Visualizer</h4>
+          <p>Feature <code>context-sanitizer xray</code> as the flagship capability to visually prove Rust systems performance and LLM context-engineering skills on GitHub.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author coach">Idea by Coach</span>
+            <span class="lens-tag">Morphological</span>
+          </div>
+          <h4>AST-Aware Structural + Token-Classifier Hybrid</h4>
+          <p>Parse code/JSON blocks with <code>tree-sitter</code> in Rust to lock structural syntax tokens while running token-level hard pruning only on comments, docstrings, and prose spans.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author coach">Idea by Coach</span>
+            <span class="lens-tag">Morphological</span>
+          </div>
+          <h4>Shared-Backbone Multi-Head System One Encoder</h4>
+          <p>Run a single encoder forward pass where the <code>[CLS]</code> head handles Hacking/Leak Gatekeeping + Routing while token heads output LLMLingua-2 keep/drop scores and PII redaction spans.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author coach">Idea by Coach</span>
+            <span class="lens-tag">Morphological</span>
+          </div>
+          <h4>Surgical Threat Excision</h4>
+          <p>Instead of crashing a 20k-token RAG/tool call when indirect prompt injection hides in one paragraph, use token-level System One attribution to surgically excise only the malicious span.</p>
+        </div>
+        <div class="idea-card">
+          <div class="idea-header">
+            <span class="author coach">Idea by Coach</span>
+            <span class="lens-tag">One Feature Only</span>
+          </div>
+          <h4>Native OpenAI / CopilotKit Wire-Protocol Engine</h4>
+          <p>Accept full <code>/v1/chat/completions</code> JSON payloads (<code>messages[]</code>, <code>tools[]</code>, <code>tool_calls[]</code>) to compress bloated tool schemas and multi-turn history in one zero-copy Rust call.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Generated by BMad Brainstorming &bull; Canonical Log: <code>_bmad-output/brainstorming/brainstorm-rust-llm-context-compression-2026-10-21/.memlog.md</code>
+    </footer>
+  </div>
+</body>
+</html>

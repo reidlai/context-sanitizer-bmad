@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BMad Forge Report — context-sanitizer (HARDENED)</title>
+  <style>
+    :root {
+      --bg: #090c12;
+      --card: #111723;
+      --card-alt: #161f30;
+      --border: #26344d;
+      --text: #e6edf3;
+      --muted: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --cyan: #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 80% 0%, #17253b 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+    .container { max-width: 1040px; margin: 0 auto; }
+    .hero {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 2.25rem;
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-text { flex: 1 1 540px; }
+    .eyebrow {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--amber);
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    h1 { font-size: 2.1rem; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); font-size: 0.98rem; }
+    .seal-wrap {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+      color: #fff;
+    }
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      margin-bottom: 1.75rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .item {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem;
+    }
+    .item.locked { border-left: 4px solid var(--green); }
+    .item.killed { border-left: 4px solid var(--red); }
+    .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+    .tag.lock { background: rgba(16,185,129,0.18); color: #34d399; }
+    .tag.kill { background: rgba(239,68,68,0.18); color: #f87171; }
+    .item h3 { font-size: 1rem; margin-bottom: 0.4rem; color: #fff; }
+    .item p { font-size: 0.88rem; color: var(--muted); }
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.9rem;
+    }
+    .persona {
+      background: var(--card-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .persona-head {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .persona-role { font-size: 0.75rem; color: var(--cyan); margin-bottom: 0.4rem; }
+    .persona-quote { font-size: 0.83rem; color: var(--muted); font-style: italic; }
+    footer { text-align: center; color: var(--muted); font-size: 0.82rem; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div class="hero-text">
+        <div class="eyebrow">BMad Forge Idea &bull; Pressure-Test Report</div>
+        <h1>context-sanitizer</h1>
+        <p class="subtitle">
+          3-Tier Rust &amp; System One LLM Firewall, Session-Scoped Shadow Vault, and Hard Token Compressor. Four critical architectural cracks were exposed, cross-examined, and resolved into hardened engineering decisions.
+        </p>
+      </div>
+      <div class="seal-wrap">
+        <!-- Prominent SVG Wax/Stamped Outcome Seal: HARDENED -->
+        <svg width="150" height="150" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="sealGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#059669" />
+              <stop offset="75%" stop-color="#047857" />
+              <stop offset="100%" stop-color="#064e3b" />
+            </radialGradient>
+          </defs>
+          <circle cx="80" cy="80" r="72" fill="url(#sealGrad)" stroke="#34d399" stroke-width="3" stroke-dasharray="6,3" />
+          <circle cx="80" cy="80" r="60" fill="none" stroke="#a7f3d0" stroke-width="1.5" />
+          <g transform="rotate(-8 80 80)">
+            <rect x="20" y="64" width="120" height="32" rx="4" fill="#064e3b" stroke="#34d399" stroke-width="2" />
+            <text x="80" y="86" text-anchor="middle" fill="#ecfdf5" font-family="monospace" font-size="18" font-weight="900" letter-spacing="3">HARDENED</text>
+          </g>
+          <text x="80" y="46" text-anchor="middle" fill="#a7f3d0" font-family="sans-serif" font-size="10" font-weight="700" letter-spacing="1.5">BMAD FORGE SEAL</text>
+          <text x="80" y="122" text-anchor="middle" fill="#a7f3d0" font-family="monospace" font-size="9" font-weight="700">2026-10-21</text>
+        </svg>
+      </div>
+    </div>
+
+    <section class="section">
+      <h2>Locked Decisions (What Survived &amp; Hardened)</h2>
+      <div class="grid-2">
+        <div class="item locked">
+          <span class="tag lock">Locked #1</span>
+          <h3>Sequential Off-the-Shelf Tier 3 Pipeline</h3>
+          <p>Tier 3 (<code>--features ml</code>) uses real, off-the-shelf Hugging Face checkpoints sequentially: the System One security gatekeeper runs first and short-circuits on threats; <em>LLMLingua-2</em> token pruning runs second only on safe inputs.</p>
+        </div>
+        <div class="item locked">
+          <span class="tag lock">Locked #2</span>
+          <h3>Trait-Based Configurable Model Swapping</h3>
+          <p>Public Rust traits (<code>pub trait SemanticGuard</code> &amp; <code>pub trait TokenCompressor</code>) plus configurable <code>guard_model_id</code> / <code>compression_model_id</code> (defaulting to <em>DeBERTa-v3 Zero-Shot NLI</em> + L0 custom terms, and <em>LLMLingua-2 BERT</em>) let users swap models anytime.</p>
+        </div>
+        <div class="item locked">
+          <span class="tag lock">Locked #3</span>
+          <h3>Session-Scoped Shadow Vault + Split Secret Policy</h3>
+          <p>Uses cryptographic session tokens (<code>&lt;SHADOW:EMAIL_8f3a2c&gt;</code>) + <code>.rehydrate()</code> API. Operational PII is vaulted two-way for tool calls; root secrets (AWS keys, PATs) default to one-way <code>[REDACTED_*]</code> to prevent indirect prompt-injection exfiltration.</p>
+        </div>
+        <div class="item locked">
+          <span class="tag lock">Locked #4</span>
+          <h3>100% Pure-Rust Lexical Scanner &amp; 3-Crate Workspace</h3>
+          <p>Uses pure-Rust lexical/JSON scanning (<code>logos</code> + <code>serde_json</code>) for syntax locking &amp; code-injection checks, organized into <code>context-sanitizer</code>, <code>context-sanitizer-cli</code> (<code>xray</code>), and <code>context-sanitizer-py</code>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Killed Assumptions (What Was Rejected &amp; Why)</h2>
+      <div class="grid-2">
+        <div class="item killed">
+          <span class="tag kill">Killed #1</span>
+          <h3>Single Shared-Backbone Multi-Head Checkpoint</h3>
+          <p>Rejected because off-the-shelf <em>Prompt Guard</em> and <em>LLMLingua-2</em> checkpoints use separate architectures and tokenizers, and training custom weights is a distraction from the Rust systems showcase.</p>
+        </div>
+        <div class="item killed">
+          <span class="tag kill">Killed #2</span>
+          <h3>Global Predictable Vault Counter (<code>EMAIL_1</code>) &amp; Root-Key Rehydration</h3>
+          <p>Rejected because sequential global IDs allow cross-tenant prompt-injection theft, and rehydrating root credentials into tool arguments allows attackers to exfiltrate keys.</p>
+        </div>
+        <div class="item killed">
+          <span class="tag kill">Killed #3</span>
+          <h3>C-Based <code>tree-sitter</code> Grammar Compilation</h3>
+          <p>Rejected because compiling multiple C/C++ language grammars bloats build times and causes cross-platform C-linker failures during <code>maturin</code> Python wheel builds.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Personas Credited in the Forge</h2>
+      <div class="persona-grid">
+        <div class="persona">
+          <div class="persona-head"><span>🏗️</span><span>Winston</span></div>
+          <div class="persona-role">System Architect (Installed)</div>
+          <div class="persona-quote">"Favor sequential short-circuit gating with real checkpoints over custom ML training."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>🔬</span><span>Dr. Elena Vance</span></div>
+          <div class="persona-role">ML Systems Skeptic (Generated)</div>
+          <div class="persona-quote">"Exposed that Prompt Guard and LLMLingua-2 do not share a single off-the-shelf encoder backbone."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>🔒</span><span>Vex</span></div>
+          <div class="persona-role">Security Engineer (Custom)</div>
+          <div class="persona-quote">"Demonstrated cross-session Shadow Vault poisoning and indirect prompt-injection key exfiltration."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>💻</span><span>Amelia</span></div>
+          <div class="persona-role">Senior Software Engineer (Installed)</div>
+          <div class="persona-quote">"Caught the missing inbound <code>.rehydrate()</code> method in the public Rust &amp; Python APIs."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>🎯</span><span>Yui</span></div>
+          <div class="persona-role">The Craftsman (Custom)</div>
+          <div class="persona-quote">"Flagged the C-toolchain and compile-time bloat of bundling multiple tree-sitter C grammars."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>🦀</span><span>Marcus</span></div>
+          <div class="persona-role">Crates.io Maintainer (Generated)</div>
+          <div class="persona-quote">"Proposed 100% pure-Rust lexical scanning (<code>logos</code> + <code>serde_json</code>) for zero-C builds."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>📏</span><span>Level</span></div>
+          <div class="persona-role">Claim Checker (Custom)</div>
+          <div class="persona-quote">"Challenged how off-the-shelf models evaluate user-defined <code>blocked_categories</code>."</div>
+        </div>
+        <div class="persona">
+          <div class="persona-head"><span>🌶️</span><span>Boundary</span></div>
+          <div class="persona-role">Edge-Case Hunter (Custom)</div>
+          <div class="persona-quote">"Caught the missing BM25 query anchor when compressing single-string prompts."</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Canonical Forge Log: <code>_bmad-output/forge/context-sanitizer/.memlog.md</code> &bull; Distilled Brief: <code>_bmad-output/forge/context-sanitizer/forged-idea.md</code>
+    </footer>
+  </div>
+</body>
+</html>

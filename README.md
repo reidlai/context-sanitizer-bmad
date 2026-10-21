@@ -4,19 +4,48 @@
 
 Built for modern Agentic AI and Copilot workflows, it solves the "context rot" problem by trimming stale history and massive tool schemas, while ensuring your AWS keys, GitHub tokens, and proprietary semantic data never leak to third-party LLM providers. It offers a pure Rust core with seamless Python bindings via `PyO3`.
 
-## The Hybrid Architecture
+## The 3-Tier Hybrid Architecture
 
-This project splits the prompt engineering pipeline into two distinct layers for maximum performance and security:
+Built specifically to sit at the boundary of **Copilot UIs (including CopilotKit and OpenAI-compatible APIs)** and **Agentic AI frameworks**, `context-sanitizer` executes a **3-Tier Speculative Cascade** for sub-millisecond speed out-of-the-box and deep neural accuracy when enabled:
 
-1. **The System One Firewall:** Uses blazing-fast, open-source System One models (e.g., DeBERTa-v3, ShieldGemma) to make bounded decisions (blocking semantic leaks and routing payloads) in a single forward pass without generating text.
-2. **The Rust & ML Compression Engine:** Leverages pure Rust lexical pruning and optional neural token classification to physically shrink the payload token-by-token.
+```text
+Incoming CopilotUI / OpenAI API / Agent Payload
+   │
+   ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│ Tier 1 (L0): Pure-Rust Deterministic & Lexical Guard (< 0.5 ms | Always)  │
+│  • aho-corasick SIMD secret & PII detection (Root Keys -> [REDACTED_*])   │
+│  • Session-Scoped Shadow Vault (<SHADOW:EMAIL_8f3a2c> + .rehydrate() API) │
+│  • Pure-Rust lexical/JSON scanner (logos + serde_json) syntax token lock  │
+└───────────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│ Tier 2 (L0.5): Pure-Rust Smart Statistical Pruning (< 2 ms | 0 MB Weights)│
+│  • Zero-weight information-theoretic pruning (tiktoken-rs + BM25/TF-IDF)  │
+│  • Tail-query auto-anchoring, JSON schema minification & history dedup    │
+└───────────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│ Tier 3 (L1): Configurable Trait-Based System One ML (--features ml)       │
+│  • Pluggable traits (SemanticGuard + TokenCompressor) & HF model_id       │
+│  • Stage 3A: Zero-Shot NLI / Prompt Guard circuit breaker (short-circuits)│
+│  • Stage 3B: LLMLingua-2 BERT token classifier (runs on allowed payloads) │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **The Configurable System One Gatekeeper (`SemanticGuard` Trait):** Uses blazing-fast, open-source System One encoder models (defaulting to *DeBERTa-v3 Zero-Shot NLI*, swappable via `guard_model_id` to *ModernBERT*, *Llama-Prompt-Guard*, or custom ONNX/Candle models) to block malicious code injections and proprietary semantic leaks in a single forward pass—short-circuiting before compression runs on blocked threats.
+2. **The Session-Scoped "Shadow Vault" + Split Secret Policy:** Operational PII (emails, IPs, phones) is swapped with session-scoped cryptographic shadow tokens (e.g., `<SHADOW:EMAIL_8f3a2c>`) bound to a `VaultHandle` with a `.rehydrate()` API so agent tool calls keep working, while root credentials (AWS keys, GitHub PATs) default to one-way `[REDACTED_*]` masks so indirect prompt injections can never exfiltrate keys.
+3. **The 100% Pure-Rust & ML Compression Engine (`TokenCompressor` Trait):** Leverages zero-C pure-Rust lexical syntax locking (`logos` + `serde_json`) and statistical pruning by default (0 MB model download required), plus optional neural token classification (*LLMLingua-2*, swappable via `compression_model_id`) to shrink payloads token-by-token without ever breaking code or JSON syntax.
 
 ## Research Foundation
 
-This project implements state-of-the-art token pruning and semantic architectures based on recent developments in prompt engineering:
+This project implements state-of-the-art token pruning and semantic architectures based on recent publicly available research in context engineering:
 
-* **System One Inference for Bounded Semantic Reasoning**: Shifts away from sequential token generation, allowing non-autoregressive, encoder-only architectures (like Microsoft's DeBERTa-v3) to compute text semantics in a single pass for zero-latency routing and safety checks.
-* **LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression (2024)**: Microsoft's research formulates prompt compression as a token classification problem. Using a small BERT-sized encoder, it achieves 3x-6x faster compression and accelerates end-to-end latency by 1.6x-2.9x while minimizing performance loss.
+* **System One Inference for Bounded Semantic Reasoning**: Shifts away from sequential token generation, allowing non-autoregressive, encoder-only architectures (like Microsoft's DeBERTa-v3 and Meta's Prompt Guard) to compute text semantics and detect indirect prompt/code injections in a single pass for near-zero-latency safety checks.
+* **LLMLingua-2: Data Distillation for Efficient and Faithful Task-Agnostic Prompt Compression (ACL 2024)**: Microsoft's research formulates prompt compression as a token classification problem ($p(\text{keep})$). Using a bidirectional encoder, it achieves 3x-6x faster compression and accelerates end-to-end latency by 1.6x-2.9x while preserving downstream accuracy.
+* **Selective Context & Query-Aware Submodular Pruning (RECOMP / Self-Information)**: Grounds our zero-weight Pure-Rust Tier 2 engine in information theory ($I(x) = -\log P(x)$) and query-aware BM25/submodular chunk selection to prune low-entropy filler tokens without requiring GPU weights.
 * **Prompt Compression for Large Language Models: A Survey (2024)**: Establishes the academic taxonomy of prompt compression, dividing the field into "hard" compression (discrete token removal/pruning) and "soft" compression (trainable continuous vectors).
 
 ## Development Methodology
@@ -31,17 +60,44 @@ Rather than ad-hoc implementation, all architecture and capabilities follow a di
 
 ## Features
 
-* **System One Semantic Firewall**: Utilizes fast, open-weights encoder models to evaluate payloads natively, blocking proprietary business concepts or semantic leaks before they leave your machine.
-* **Hard Token Compression (Human-Readable)**: Implements "hard" compression techniques to physically remove redundant tokens. Unlike soft prompt vectors, this ensures the compressed payload remains fully human-readable for security auditing and black-box API compatibility.
-* **Zero-Leak Regex Security**: Sub-millisecond interception of hardcoded secrets using the `aho-corasick` multi-pattern search engine.
-* **Intelligent Payload Routing**: Local classifications instantly route different context types (e.g., "Code", "Logs", "Conversational") to the most efficient pruning algorithms.
-* **Lexical Pruning**: Automatically strips markdown bloat, minimizes JSON tool schemas, and truncates stale conversational history natively in Rust.
-* **Opt-In ML Compression**: Built-in hooks to support Hugging Face's `candle` framework for local, token-by-token neural compression.
-* **Cross-Language Support**: Publish as a native Rust crate or install directly into your Python Agentic loops.
+* **System One Semantic Firewall & Code-Injection Gatekeeper**: Intercepts malicious code injections, jailbreaks, and proprietary semantic leaks entering through Copilot UIs (CopilotKit, OpenAI API `/v1/chat/completions`) before they reach your agentic framework.
+* **Pluggable Model Traits (`SemanticGuard` & `TokenCompressor`)**: Ships with *DeBERTa-v3 Zero-Shot NLI* and *LLMLingua-2 BERT* defaults, while allowing users to swap in any Hugging Face or local checkpoint (`guard_model_id` / `compression_model_id`, e.g., *ModernBERT*, *Llama-Prompt-Guard*, or custom ONNX/Candle models) or implement the Rust traits directly.
+* **Session-Scoped "Shadow Vault" + Split Secret Policy**: Replaces operational PII (emails, phone numbers, IPs, customer IDs) with session-scoped cryptographic tokens (`<SHADOW:EMAIL_8f3a2c>`) that can be rehydrated locally via `.rehydrate()` for tool calls, while root credentials (AWS keys, GitHub PATs, private keys) default to one-way `[REDACTED_*]` masks so indirect prompt injections can never exfiltrate keys.
+* **3-Tier Hard Token Compression (100% Pure-Rust & Syntax-Safe)**: Combines a zero-C pure-Rust lexical/JSON scanner (`logos` + `serde_json`) for syntax token locking with Pure-Rust statistical pruning (Tier 2: `tiktoken-rs` + BM25/self-information with tail-query auto-anchoring) and *LLMLingua-2* neural token classification (Tier 3).
+* **Context X-Ray CLI & Benchmark Visualizer (`context-sanitizer xray`)**: Built-in terminal diagnostic tool (`context-sanitizer-cli`) that visualizes pruned tokens, Shadow-Vaulted PII, one-way redacted secrets, System One threat scores, dollar savings, and microsecond latency.
+* **Zero-Leak SIMD Regex Security**: Sub-millisecond interception of hardcoded secrets and PII using the `aho-corasick` SIMD multi-pattern search engine.
+* **Modular 3-Crate Cargo Workspace**: Clean separation across `context-sanitizer` (core Rust library), `context-sanitizer-cli` (`xray` binary), and `context-sanitizer-py` (`PyO3` Python bindings).
+
+## Context X-Ray CLI (`context-sanitizer xray`)
+
+Inspect, benchmark, and visualize exactly how `context-sanitizer` protects and compresses your prompts in the terminal:
+
+```bash
+cargo install context-sanitizer-cli
+context-sanitizer xray payload.json --rate 0.35
+```
+
+```text
+╭─ Context X-Ray: payload.json ────────────────────────────────────────────────╮
+│ Tier 1 (L0 Guard)    : 2 PII Vaulted | 1 Root Key Redacted | 14 syntax locks │
+│ Tier 2 (L0.5 Rust)   : Pruned 1,420 low-entropy & schema bloat tokens        │
+│ Tier 3 (L1 System 1) : Threat Score 0.03 (SAFE) | Route: Code+Chat           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ User: Please check login failure for <SHADOW:EMAIL_8f3a2c> on <SHADOW:IP_9b1e>│
+│ Code: AWS_ACCESS_KEY_ID=[REDACTED_AWS_KEY]                                   │
+│ function execute_deployment() {                                              │
+│   [-// This is a very long comment that explains nothing-]                   │
+│   return true;                                                               │
+│ }                                                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Tokens : 3,200 ──► 1,088 (66.0% saved | Target: 0.35)                        │
+│ Savings: ~$0.0318 / 1k calls (GPT-4o)  |  Latency: 412 µs (L0+L0.5)          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
 
 ## Quick Start: Python
 
-The Python package is pre-compiled using `maturin`. You do not need Rust installed on your machine to use it.
+The Python package (`context-sanitizer-py`) is pre-compiled using `maturin` with zero C/C++ grammar dependencies. You do not need Rust installed on your machine to use it.
 
 ### Installation
 
@@ -54,27 +110,28 @@ pip install context-sanitizer
 ```python
 from context_sanitizer import PromptSanitizer
 
-# Initialize the engine with security and optimization parameters
+# Initialize the engine with security, Shadow Vault, and configurable models
 sanitizer = PromptSanitizer(
-    use_system_one_guard=True,         # Enable local open-source semantic firewall & routing
-    use_ml_compression=True,           # Enable neural compression (e.g., LLMLingua-2)
+    use_system_one_guard=True,         # Enable local System One semantic firewall & routing
+    use_ml_compression=True,           # Enable neural compression (Stage 3B)
+    guard_model_id="MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli", # Configurable!
+    compression_model_id="microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank",
     target_compression_rate=0.33,      # Target rate: keep ~33% of the original tokens
     force_tokens=['\n', '?']           # Ensure structural and interrogative tokens are never dropped
 )
 
 dirty_prompt = """
 System: You are an AI assistant.
-User: Please check my code for the upcoming deployment. I am getting an error.
+User: Please check why alice@acme.com is getting an error during deployment.
 Code: 
-AWS_ACCESS_KEY_ID=XXXXXXXXXXXXXXXXXXXX
+AWS_ACCESS_KEY_ID=<YOUR_AWS_ACCESS_KEY_ID>
 function execute_deployment() {
     //  This is a   very    long     comment that explains nothing
-    //  Project Alpha Launch Strategy: Unreleased Q4 Financials
     return true;
 }
 """
 
-# The engine scrubs credentials, compresses bloat, and checks semantic guardrails
+# Scrubs root keys ([REDACTED_*]), vaults PII (<SHADOW:EMAIL_*>), compresses bloat, and runs System One guardrails
 result = sanitizer.sanitize_and_compress(dirty_prompt)
 
 # Handle security block or proceed with clean, compressed prompt
@@ -82,8 +139,14 @@ if result.get("status") == "blocked":
     print(f"⚠️ Security Alert: Payload blocked! Reason: {result['reason']}")
     print(f"Violations detected: {result.get('violations', [])}")
 else:
-    print("--- Compressed Prompt ---")
+    print("--- Compressed Prompt (Safe for Cloud LLM) ---")
     print(result["compressed_prompt"])
+
+    # When the LLM emits a tool call using the shadow token, rehydrate locally using the session handle:
+    llm_tool_call = '{"tool": "lookup_user", "email": "<SHADOW:EMAIL_8f3a2c>"}'
+    local_tool_args = sanitizer.rehydrate(llm_tool_call, session_id=result["session_id"])
+    print("\n--- Rehydrated Local Tool Call ---")
+    print(local_tool_args)
 
     print("\n--- Optimization Metrics ---")
     print(f"Original Tokens: {result['origin_tokens']}")
@@ -94,7 +157,7 @@ else:
 
 ## Quick Start: Rust
 
-You can embed the pure Rust core directly into your own proxy servers or Rust-based AI agents.
+You can embed the pure Rust core directly into your own proxy servers or Rust-based AI agents, and swap models via builder configuration or the `SemanticGuard` and `TokenCompressor` traits.
 
 ### Installation
 
@@ -108,19 +171,29 @@ cargo add context-sanitizer
 use context_sanitizer::{SanitizerEngine, Decision};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let engine = SanitizerEngine::new();
+    // Configurable builder (swap Hugging Face or local model_id anytime)
+    let engine = SanitizerEngine::builder()
+        .with_target_compression_rate(0.35)
+        .with_guard_model("MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli")
+        .with_compressor_model("microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank")
+        .build()?;
     
     let dirty_payload = r#"
         {
             "role": "user",
-            "content": "My GitHub token is XXXXXXXXXXXXXXXXXXXX.    Please help   me."
+            "content": "My GitHub token is <YOUR_GITHUB_TOKEN>. Check account alice@acme.com please."
         }
     "#;
     
-    // Inspects payload for secrets, applies semantic guardrails, and compresses tokens
+    // Inspects payload: root keys -> [REDACTED_*], PII -> session Shadow Vault, syntax-locked compression
     match engine.inspect(dirty_payload) {
         Decision::Allowed(safe_payload) => {
-            println!("Safe Payload:\n{}", safe_payload.content);
+            println!("Safe Payload for LLM:\n{}", safe_payload.content);
+
+            // Rehydrate session-scoped PII tokens locally when executing tool calls
+            let tool_args = r#"{"email": "<SHADOW:EMAIL_8f3a2c>"}"#;
+            let rehydrated = safe_payload.vault_handle().rehydrate(tool_args);
+            println!("Rehydrated Tool Args:\n{}", rehydrated);
         }
         Decision::Blocked(violation) => {
             eprintln!("⚠️ Security Alert: Payload blocked! [{}] {}", violation.category, violation.reason);
@@ -131,26 +204,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## Agentic AI Integrations
+## Agentic AI & Copilot UI Integrations
 
-Modern Agentic workflows suffer from **context rot** (token bloat from recursive loops and verbose tool schemas) and **secret exposure** (leaking credentials or proprietary data from tool execution outputs). 
+Modern Agentic workflows and **Copilot UIs (including CopilotKit and OpenAI-compatible APIs)** suffer from **context rot** (token bloat from recursive loops and verbose tool schemas), **user PII/secret exposure** (users pasting personal information or credentials into chat), and **adversarial code injection** (attackers injecting malicious payloads through frontend copilot widgets). 
 
-`context-sanitizer` provides a **two-tier defense model**:
-1. **Soft Mitigation (Redaction & Masking):** Standard secrets (e.g., AWS keys, GitHub PATs) are sanitized in-place with `[REDACTED_*]` tokens so the agent can safely continue.
-2. **Hard Mitigation (Circuit Breaker & Quarantine):** When the System One firewall detects proprietary semantic leaks, jailbreaks, or fraud, it halts execution immediately—protecting sensitive IP and preventing costly third-party API calls.
+`context-sanitizer` provides a **hardened two-tier defense model with a split secret policy**:
+1. **Soft Mitigation (Session-Scoped Shadow Vault & Root-Secret Masking):**
+   - **Operational PII** (emails, phones, IPs, user IDs) is swapped in-place with session-scoped cryptographic tokens (`<SHADOW:EMAIL_8f3a2c>`). The cloud LLM never sees raw PII, while local tool calls rehydrate the original values via `.rehydrate()` using the session's `VaultHandle`.
+   - **Root Credentials** (AWS secret keys, GitHub PATs, private keys) default to one-way `[REDACTED_*]` masks so an indirect prompt injection can never trick an agent tool into exfiltrating root keys.
+2. **Hard Mitigation (Circuit Breaker & Quarantine):** When the System One gatekeeper (`SemanticGuard`) or pure-Rust lexical scanner detects malicious code injections, proprietary semantic leaks, or jailbreaks, it short-circuits execution immediately—protecting your infrastructure and preventing costly third-party API calls.
 
 | Scenario | System Action | Downstream LLM Invoked? |
 | :--- | :--- | :--- |
-| **Standard Keys / Credentials** | Masked with `[REDACTED_*]` tokens | **Yes** (Safe payload forwarded) |
-| **Token Bloat / Stale History** | Compressed lexically & neurally | **Yes** (Latency & cost reduced) |
-| **Proprietary Semantic Leaks** | Blocked with security reason | **No** (Halted locally before API call) |
-| **Prompt Injections / Fraud** | Quarantined to SecOps/SIEM | **No** (Zero inference cost incurred) |
+| **Operational PII in Copilot UI** (`email`, `IP`, `phone`) | Swapped via **Session-Scoped Shadow Vault** (`<SHADOW:EMAIL_8f3a2c>`) | **Yes** (Safe payload forwarded; tool calls rehydrated via `.rehydrate()`) |
+| **Root Credentials** (`AWS_KEY`, `GITHUB_TOKEN`, `PEM`) | Masked one-way with `[REDACTED_*]` tokens | **Yes** (Safe payload forwarded; root keys never rehydrated to tools) |
+| **Token Bloat / Stale History / Tool Schemas** | Compressed via Pure-Rust Tier 2 & *LLMLingua-2* Tier 3 | **Yes** (Latency & cost reduced by 40–70%) |
+| **Proprietary Semantic Leaks** | Blocked via Zero-Shot NLI + L0 custom terms | **No** (Short-circuited locally before API call) |
+| **Malicious Code / Prompt Injections** | Quarantined to SecOps/SIEM | **No** (Zero inference cost incurred) |
 
 ---
 
-### Python: LangGraph Integration (with Security Quarantine)
+### Python: LangGraph Integration (with Security Quarantine & Tool Rehydration)
 
-Use LangGraph conditional edges (`add_conditional_edges`) to route execution to a `quarantine` node when severe security threats or semantic leaks are intercepted:
+Use LangGraph conditional edges (`add_conditional_edges`) to route execution to a `quarantine` node when severe security threats or semantic leaks are intercepted, and rehydrate Shadow-Vaulted PII locally before tool execution:
 
 ```python
 from typing import TypedDict, List, Optional
@@ -158,27 +234,29 @@ from langchain_core.messages import BaseMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from context_sanitizer import PromptSanitizer
 
-# 1. Define Agent State with Security Flags
+# 1. Define Agent State with Security Flags & Vault Session ID
 class AgentState(TypedDict):
     messages: List[BaseMessage]
     clean_prompt: Optional[str]
+    vault_session_id: Optional[str]
     is_blocked: bool
     rejection_reason: Optional[str]
 
-# 2. Initialize with System One Guardrails
+# 2. Initialize with Configurable System One Guardrails
 sanitizer = PromptSanitizer(
     use_system_one_guard=True,
+    guard_model_id="MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli",
     blocked_categories=["PROPRIETARY_IP", "UNRELEASED_FINANCIALS", "PROMPT_INJECTION"],
     hard_block_on_threat=True,
     target_compression_rate=0.40
 )
 
-# 3. Node: Sanitize, Compress, and Evaluate Threat Level
+# 3. Node: Sanitize, Vault PII, Compress, and Evaluate Threat Level
 def sanitize_node(state: AgentState):
     raw_context = "\n".join(f"{m.type}: {m.content}" for m in state["messages"])
     result = sanitizer.sanitize_and_compress(raw_context)
     
-    # Check if System One Firewall tripped a hard block
+    # Check if System One Firewall tripped a hard block (short-circuited)
     if result.get("status") == "blocked":
         return {
             "is_blocked": True,
@@ -187,6 +265,7 @@ def sanitize_node(state: AgentState):
         
     return {
         "clean_prompt": result["compressed_prompt"],
+        "vault_session_id": result["session_id"],
         "is_blocked": False
     }
 
@@ -196,9 +275,13 @@ def quarantine_node(state: AgentState):
     alert_msg = f"Security Policy Violation: {state['rejection_reason']}"
     return {"messages": state["messages"] + [AIMessage(content=alert_msg)]}
 
-# 5. Node: Standard Model Execution
+# 5. Node: Standard Model Execution + Local Tool Call Rehydration
 def call_model_node(state: AgentState):
     response = llm.invoke(state["clean_prompt"])
+    # If the LLM emitted tool calls containing <SHADOW:*> tokens, rehydrate locally:
+    if getattr(response, "tool_calls", None) and state.get("vault_session_id"):
+        for call in response.tool_calls:
+            call["args"] = sanitizer.rehydrate(call["args"], session_id=state["vault_session_id"])
     return {"messages": state["messages"] + [response]}
 
 # 6. Build Conditional State Graph
@@ -227,9 +310,9 @@ app = workflow.compile()
 
 ---
 
-### Rust: Rig Integration (Circuit Breaker Pattern)
+### Rust: Rig Integration (Circuit Breaker & Shadow Vault Pattern)
 
-In Rust-based agents built with [Rig](https://github.com/0xPlaygrounds/rig), use `Decision` matching to prevent tainted or malicious tool outputs from reaching the LLM:
+In Rust-based agents built with [Rig](https://github.com/0xPlaygrounds/rig), use `Decision` matching to prevent tainted or malicious tool outputs from reaching the LLM and `.rehydrate()` to restore operational PII for local tools:
 
 ```rust
 use context_sanitizer::{SanitizerEngine, Decision, SecurityViolation};
@@ -238,16 +321,18 @@ use rig::providers::openai::{self, GPT_4O};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = openai::Client::from_env();
-    let engine = SanitizerEngine::new();
+    let engine = SanitizerEngine::builder()
+        .with_guard_model("MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-wanli")
+        .build()?;
 
     // Raw payload from runtime tool execution containing confidential data
     let dirty_tool_output = r#"
-        System: Executing cloud audit...
-        Tool [bash]: AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+        System: Executing cloud audit for customer alice@acme.com...
+        Tool [bash]: AWS_SECRET_ACCESS_KEY=<YOUR_AWS_SECRET_ACCESS_KEY>
         Tool [files]: Confidential Q4 Unreleased Financial Forecasts for Project Alpha.
     "#;
 
-    // Evaluate input through the System One firewall & secret engine
+    // Evaluate input through the System One firewall, Shadow Vault, & secret engine
     match engine.inspect(dirty_tool_output) {
         Decision::Allowed(clean_payload) => {
             // Forward sanitized & compressed context to Rig agent
@@ -257,7 +342,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build();
 
             let response = agent.prompt(&clean_payload.content).await?;
-            println!("Rig Agent Response:\n{}", response);
+            // Rehydrate any <SHADOW:*> operational PII tokens if needed for local follow-up tools:
+            let local_output = clean_payload.vault_handle().rehydrate(&response);
+            println!("Rig Agent Response:\n{}", local_output);
         }
         Decision::Blocked(violation) => {
             // Hard circuit breaker triggered: DO NOT call the LLM
@@ -277,7 +364,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Build from Source
 
-All components (pure Rust core, proxy binary, and Python bindings) are driven entirely through standard `cargo` workflows.
+The repository is structured as a **3-crate Cargo workspace** (`100% pure Rust` by default with zero C/C++ grammar build dependencies):
+* `crates/context-sanitizer`: Core Rust library (`L0` SIMD/lexical guard + Shadow Vault, `L0.5` statistical pruning, and `L1` `SemanticGuard` / `TokenCompressor` traits).
+* `crates/context-sanitizer-cli`: The `context-sanitizer xray` terminal visualizer & benchmark binary.
+* `crates/context-sanitizer-py`: `PyO3` / `maturin` Python bindings.
 
 ### Prerequisites
 
