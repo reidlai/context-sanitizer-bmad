@@ -27,7 +27,7 @@ Modern Agentic AI workflows, interactive Copilot frontends, and Retrieval-Augmen
 
 Existing defenses force an unacceptable trade-off: **sluggish Python rails** (NeMo, Presidio, hosted cloud proxies) that add 50ms–500ms of latency and require multi-gigabyte runtimes, or **naive string replacement regexes** that mangle code ASTs, break JSON syntax, and blind-redact operational data that tools legitimately need to execute.
 
-**`context-sanitizer`** establishes a high-performance, local-first context boundary layer. Built in pure Rust and distributed as a single library, diagnostic CLI, zero-C Python wheel, and WebAssembly package, it acts as a **System One semantic firewall** and **syntax-safe token compressor**. Through a **3-Tier Speculative Cascade**, it delivers deterministic secret redaction in `< 0.5 ms`, zero-weight statistical pruning in `< 2 ms` (requiring 0 MB of downloaded model weights), and optional non-autoregressive encoder classification via pluggable traits. It protects live agent workflows against credential exfiltration and slashes token costs in half—without adding user lag or corrupting downstream JSON schemas.
+**`context-sanitizer`** establishes a high-performance, local-first context boundary layer. Built in pure Rust and distributed as a single library, diagnostic CLI, zero-C Python wheel, and WebAssembly package, it acts as a **System One semantic firewall** and **syntax-safe token compressor**. Through a **3-Tier Speculative Cascade**, it delivers deterministic secret redaction in `~20,000–100,000 ns` median (`< 500,000 ns` P99), zero-weight statistical pruning in `~300,000–400,000 ns` median (`< 1,500,000 ns` P99, requiring 0 MB of downloaded model weights), and optional non-autoregressive encoder classification (`< 100,000 ns` fast-breaker + `< 5,000,000 ns` P99 ceiling) via pluggable traits. It protects live agent workflows against credential exfiltration and slashes token costs in half—without adding user lag or corrupting downstream JSON schemas.
 
 ---
 
@@ -64,7 +64,7 @@ Existing defenses force an unacceptable trade-off: **sluggish Python rails** (Ne
 - **Persona & Context:** Elena, VP of Engineering evaluating `context-sanitizer` for adoption across 15 engineering squads. Skeptical of "sub-millisecond" and "70% compression" claims.
 - **Entry State:** Developer workstation with a 10KB sample OpenAI chat payload containing tool definitions, code snippets, and customer messages.
 - **Path:** Elena runs `context-sanitizer xray payload.json --bench`.
-- **Climax:** In under 30 seconds, the terminal displays an ASCII dashboard: Tier 1 runtime (`0.38 ms`), Tier 2 runtime (`1.42 ms`), total tokens reduced from 4,120 to 1,730 (58.0% savings), syntax lock status (100% code fences and JSON keys preserved), and estimated annual savings of $42,000 at current company query volumes.
+- **Climax:** In under 30 seconds, the terminal displays an ASCII dashboard: Tier 1 runtime (`380,000 ns`), Tier 2 runtime (`1,420,000 ns`), total tokens reduced from 4,120 to 1,730 (58.0% savings), syntax lock status (100% code fences and JSON keys preserved), and estimated annual savings of $42,000 at current company query volumes.
 - **Resolution:** Elena verifies the benchmark locally without downloading any model weights, validating architectural claims and approving team-wide adoption. Realizes FR-4, FR-5, FR-12.
 
 #### UJ-4: Tara deploys client-side context sanitization in a browser extension / edge worker
@@ -80,7 +80,7 @@ Existing defenses force an unacceptable trade-off: **sluggish Python rails** (Ne
 
 Downstream workflows, specifications, and code must use these terms verbatim:
 
-- **System One Gatekeeper:** Fast, non-autoregressive pattern matching or encoder classification operating in microseconds to milliseconds, short-circuiting threats before recursive or slow LLM processing.
+- **System One Gatekeeper:** Fast, non-autoregressive pattern matching or encoder classification operating in nanoseconds (`ns`), short-circuiting threats before recursive or slow LLM processing.
 - **Speculative Cascade:** The staged 3-tier execution pipeline (Tier 1 Pure-Rust Deterministic Guard $\to$ Tier 2 Pure-Rust Statistical Compressor $\to$ Tier 3 Trait-Decoupled Neural Encoders).
 - **Split-Secret Policy:** The core security invariant where root cloud credentials are permanently masked (`[REDACTED_CREDENTIAL]`), while operational PII is swapped with session-scoped shadow tokens.
 - **Shadow Vault (`VaultHandle`):** A thread-safe, in-memory, session-scoped mapping store between raw operational PII and cryptographic shadow tokens, supporting authorized local `.rehydrate()`.
@@ -88,7 +88,7 @@ Downstream workflows, specifications, and code must use these terms verbatim:
 - **Syntax Token Locking:** Lexical token pre-processing (`logos` + `serde_json`) that marks structural code, shell substitutions, and JSON delimiters as immutable prior to statistical compression.
 - **Fail-Open Syntax Invariant:** The safety rule guaranteeing that if any payload block fails structural or JSON parsing after compression, it emits verbatim without compression, preventing downstream JSON parse failures.
 - **Tail-Query Auto-Anchoring:** Infinite priority assignment to the latest user message, system instructions, and JSON schema keys so they are never pruned during compression.
-- **Context X-Ray:** The standalone terminal diagnostic and benchmarking CLI (`context-sanitizer xray`) providing microsecond latency breakdown, token reduction visualization, and threat inspection.
+- **Context X-Ray:** The standalone terminal diagnostic and benchmarking CLI (`context-sanitizer xray`) providing nanosecond (`ns`) latency and `ns/byte` throughput breakdown, token reduction visualization, and threat inspection.
 - **Turnkey Middleware:** Pre-built integration wrappers for LangChain, CrewAI, AutoGen, and standard OpenAI clients that enable boundary protection in two lines of code.
 
 ---
@@ -98,7 +98,7 @@ Downstream workflows, specifications, and code must use these terms verbatim:
 ### 4.1 Feature 1: Deterministic Guard & Split-Secret Shadow Vault (Tier 1 / L0)
 
 **Description:**  
-Runs at sub-millisecond speeds (`< 0.5 ms`) directly on raw incoming payloads. It uses high-throughput SIMD pattern matching (`aho-corasick`) to scan for known high-entropy secrets and operational PII. It enforces a strict **Split-Secret Policy**: root cloud credentials (which can never legitimately be used in tool calls) are permanently masked, while operational PII is vaulted into session-scoped shadow tokens that can be safely rehydrated locally on the developer's internal network. Realizes UJ-1, UJ-2, UJ-4.
+Runs at nanosecond-scale speeds (`~20,000–100,000 ns` median / `~5–25 ns/byte`, `< 500,000 ns` P99 per 4KB) directly on raw incoming payloads. It uses high-throughput $O(N)$ linear-time SIMD pattern matching (`aho-corasick`) to scan for known high-entropy secrets and operational PII. It enforces a strict **Split-Secret Policy**: root cloud credentials (which can never legitimately be used in tool calls) are permanently masked, while operational PII is vaulted into session-scoped shadow tokens that can be safely rehydrated locally on the developer's internal network. Realizes UJ-1, UJ-2, UJ-4.
 
 #### FR-1: Comprehensive Credential Interception & One-Way Redaction
 The engine must detect root cloud credentials, service keys, and generic high-entropy secrets, replacing them with irreversible masks (`[REDACTED_CREDENTIAL]`).
@@ -129,7 +129,7 @@ The session `VaultHandle` must provide a thread-safe `.rehydrate()` method that 
 ### 4.2 Feature 2: Zero-Weight Statistical Compression & Syntax Locking (Tier 2 / L0.5)
 
 **Description:**  
-Operating in under 2ms with **0 MB of model weights downloaded**, Tier 2 prunes conversational redundancy and minifies bloated schemas. Before statistical pruning evaluates tokens, a pure-Rust lexical scanner locks code blocks, shell commands, and JSON syntax. To protect mission-critical workflows, the engine enforces a strict **Fail-Open Syntax Invariant**. Realizes UJ-1, UJ-3, UJ-4.
+Operating in `~300,000–400,000 ns` median (`~75–100 ns/byte`, `< 1,500,000 ns` P99 per 4KB) with **0 MB of model weights downloaded**, Tier 2 prunes conversational redundancy and minifies bloated schemas. Before statistical pruning evaluates tokens, a pure-Rust lexical scanner locks code blocks, shell commands, and JSON syntax. To protect mission-critical workflows, the engine enforces a strict **Fail-Open Syntax Invariant**. Realizes UJ-1, UJ-3, UJ-4.
 
 #### FR-4: Syntax Token Locking & Fail-Open AST Invariant
 The engine must lexically analyze the payload using a pure-Rust tokenizer (`logos` + `serde_json`), marking structural JSON characters (`{`, `}`, `[`, `]`, `:`, `,`), key names, markdown code fences (```` ``` ````), inline shell backticks (`` `command` ``), subshell substitutions (`$(...)`), and environment variable expansions (`$VAR`, `${VAR}`) as immutable locked tokens. Realizes UJ-1, UJ-3, UJ-4.
@@ -162,10 +162,11 @@ The core library must define clean, decoupled Rust traits for semantic threat ev
   - Third-party developers or downstream crates can implement custom guardrails or compressors by implementing the traits without modifying the core crate.
   - Compiling without `--features ml` completely excludes Candle, PyTorch, and ONNX dependencies from the binary.
 
-#### FR-8: System One Encoder Threat Scoring & 512-Token Sliding Window
-When enabled with supported checkpoints (e.g., `meta-llama/Llama-Prompt-Guard-2-22M` or `MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33`), the engine must evaluate incoming user content for prompt injection and jailbreak risk within $\le 25\text{ ms}$. Realizes UJ-2.
+#### FR-8: Two-Stage Nanosecond Threat Gatekeeper (`< 100,000 ns` Fast-Breaker + `< 5,000,000 ns` Surprisal-Guided Encoder)
+The engine must block prompt injections, role-delimiter spoofing, and markdown exfiltration via a `< 100,000 ns` (`~10–25 ns/byte`) $O(N)$ SIMD fast-breaker, and when enabled with `--features ml` (`meta-llama/Llama-Prompt-Guard-2-22M` or `MoritzLaurer/deberta-v3-xsmall-zeroshot-v1.1-all-33`), evaluate the top-$K$ ($K \le 2$) highest-surprisal 512-token overlapping windows within `~1,500,000–3,500,000 ns` median (`< 5,000,000 ns` hard `guard_timeout_ns` P99 ceiling) to prevent Neural Sponge CPU exhaustion attacks. Realizes UJ-2.
 - **Consequences (testable):**
-  - Payloads exceeding the 512-token encoder limit are processed via a sliding-window chunker with stride alignment, aggregating the maximum threat score across chunks.
+  - Structural injection patterns (`<|im_start|>system`, `[INST]`, `Ignore previous instructions`, markdown image exfiltration `![...](https://...)`, encoded smuggling) are short-circuited in `< 100,000 ns` (`~10–25 ns/byte`) before neural inference.
+  - Payloads exceeding the 512-token encoder limit are sliced via an overlapping sliding-window chunker and ranked by Tier 2 Shannon surprisal so at most $K \le 2$ windows are evaluated under a strict `guard_timeout_ns = 5,000,000 ns` ceiling.
   - If the threat score exceeds the configured threshold (`--threat-threshold 0.85`), the pipeline aborts immediately, emitting a threat alert and short-circuiting downstream LLM/compression calls.
 
 #### FR-9: Graceful Fallback & Fault Isolation
@@ -195,13 +196,24 @@ The Python package (`context-sanitizer-py`) must be distributed as precompiled w
 #### FR-12: Context X-Ray Diagnostic & Benchmarking CLI (`context-sanitizer xray`)
 The standalone CLI must provide an `xray` command that processes any input payload and outputs a terminal diagnostic visualizer. Realizes UJ-3.
 - **Consequences (testable):**
-  - The CLI outputs: microsecond execution time per tier, tokens before/after, percentage pruned, estimated dollar savings across major LLM price tiers (GPT-4o, Claude 3.5 Sonnet), vaulted PII entities, and threat scores.
+  - The CLI outputs: nanosecond (`ns`) execution time per tier (`std::time::Instant::elapsed().as_nanos()` and `ns/byte`), tokens before/after, percentage pruned, estimated dollar savings across major LLM price tiers (GPT-4o, Claude 3.5 Sonnet), vaulted PII entities, and threat scores.
   - Supplying `--bench` executes deterministic throughput benchmarks against local test corpora.
 
 #### FR-13: Universal WebAssembly / WASI Compilation for Tier 1 & Tier 2
 The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` and `wasm32-wasip1` targets via `wasm-pack`, packaged as `@context-sanitizer/wasm`. Realizes UJ-4.
 - **Consequences (testable):**
   - The Wasm bundle executes in browser environments, Electron apps, and Cloudflare Workers, achieving deterministic secret masking and statistical compression before data crosses the network.
+
+#### FR-14: Automated DevSecOps CI/CD Pipeline, Local `pre-commit` Framework & Pre/Post-Build Gates
+The repository must enforce both a local **`pre-commit` framework** (`.pre-commit-config.yaml`) that executes local CI checks on `git commit` / `git push` and a staged 6-step GitHub Actions pipeline (`.github/workflows/`) where formatting, linting, SAST, SCA, unit tests, integration tests, and test coverage gates must all pass **before** any release binary, Python wheel, or WebAssembly artifact build is executed, followed by post-build black-box integration testing.
+- **Consequences (testable):**
+  - **Stage 0 — Local `pre-commit` & `pre-push` Developer Hooks (`.pre-commit-config.yaml`):** Automatically runs local CI gates on developer commits/pushes (`cargo fmt`, `cargo clippy -- -D warnings`, `ruff`, `gitleaks` secret detection, `cargo deny check`, and pre-push `cargo test` unit + integration runs) so violations and secrets are caught locally before reaching remote branches.
+  - **Stage 1 — Formatting & Linting:** Enforces `cargo fmt --all -- --check` and `cargo clippy --workspace --all-targets --all-features -- -D warnings` (for Rust) alongside `ruff format --check` and `ruff check` (for Python bindings).
+  - **Stage 2 — Source Code SAST & Secret Scanning:** Enforces compiler/clippy AST safety invariants (`#![forbid(unsafe_code)]`, `clippy::unwrap_used`, `clippy::expect_used`, `clippy::panic` denied in library code), static security scanning (**Semgrep / CodeQL** for Rust & Python), and `gitleaks` ensuring only synthetic canary credentials exist in test fixtures.
+  - **Stage 3 — Software Composition Analysis (SCA) & License Auditing:** Enforces `cargo audit` (RustSec CVE database), `cargo deny check advisories bans licenses sources` (`deny.toml` enforcing MIT/Apache-2.0/BSD-3-Clause), and `pip-audit` for Python dependencies.
+  - **Stage 4 — Unit Tests, Source Integration Tests & Test Coverage Gate (Pre-Build):** Executes unit tests (`cargo test --workspace --lib --bins`) followed by workspace integration tests (`cargo test --workspace --test '*'` and `--features ml`), enforcing a mandatory minimum line coverage gate ($\ge 85\%$) via `cargo llvm-cov --workspace --fail-under-lines 85` (and `pytest --cov-fail-under=85`) before artifact compilation.
+  - **Stage 5 — Gated Artifact Build & Packaging:** Only after Stages 1–4 succeed does CI compile release binaries (`cargo build --release`), zero-C Python wheels via `maturin build --release` (`manylinux_2_28`, `macos-universal2`, `windows-x64`), and `@context-sanitizer/wasm` packages via `wasm-pack`.
+  - **Stage 6 — Post-Build Artifact E2E Integration & Benchmark Verification:** Executes black-box end-to-end integration tests directly against the built artifacts: running the compiled `context-sanitizer xray` binary and `--bench` regression gates, installing the compiled `.whl` into a clean virtualenv (without C/Rust compilers) to run the E2E agent middleware `pytest` suite, and executing JS/WASI E2E integration tests against the packaged `@context-sanitizer/wasm` bundle.
 
 ---
 
@@ -232,13 +244,14 @@ The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` a
   - JSON tool schema minification ($\ge 30\%$ schema reduction).
 - **Tier 3 (L1 Pluggable ML - `--features ml`):**
   - Decoupled `pub trait SemanticGuard` and `pub trait TokenCompressor`.
-  - Non-autoregressive encoder classification (`candle-transformers`) with 512-token sliding window for prompt injection & jailbreak detection ($\le 25\text{ ms}$).
+  - Two-stage nanosecond threat gatekeeper: `< 100,000 ns` (`~10–25 ns/byte`) $O(N)$ SIMD fast-breaker + non-autoregressive encoder classification (`candle-transformers`) over top-$K$ ($K \le 2$) surprisal-ranked 512-token sliding windows (`~1,500,000–3,500,000 ns` median, `< 5,000,000 ns` hard `guard_timeout_ns` P99 ceiling).
   - Graceful fallback to Tier 2 on missing model weights.
 - **Multi-Surface & Tooling:**
   - Ingestion of OpenAI `/v1/chat/completions` and `/v1/chat` message arrays as well as `/v1/completions` raw string prompts.
   - Zero-C precompiled Python wheels via `maturin` with turnkey middleware (LangChain, CrewAI, AutoGen).
   - Context X-Ray CLI (`context-sanitizer xray payload.json --bench`).
   - Universal WebAssembly bundle (`@context-sanitizer/wasm`) for browser and edge runtimes.
+  - Automated DevSecOps CI/CD pipeline and local `.pre-commit-config.yaml` hooks (`cargo fmt`, `clippy`, `ruff`, `gitleaks`, `cargo-audit`, `cargo-deny`, unit + integration tests, $\ge 85\%$ coverage gate, cross-platform E2E tests, and multi-target wheel/Wasm release matrix).
 
 ### 6.2 Out of Scope for MVP (Deferred to v2+)
 - **Streaming chunk token compression** (v1 operates on complete prompt payloads prior to HTTP dispatch).
@@ -251,7 +264,7 @@ The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` a
 
 ### Primary Metrics
 - **SM-1 (Token Compression Ratio):** Reduce multi-turn conversational prompt tokens by 40%–70% and JSON tool schema tokens by $\ge 30\%$. (Validates FR-5, FR-6).
-- **SM-2 (Execution Latency Budgets):** Tier 1 execution $< 0.5\text{ ms}$; Tier 2 execution $< 2.0\text{ ms}$ per 4KB payload on commodity CPU hardware. (Validates FR-1, FR-2, FR-4, FR-5).
+- **SM-2 (Execution Latency Budgets in Nanoseconds):** Tier 1 execution `~20,000–100,000 ns` median (`~5–25 ns/byte`, `< 500,000 ns` P99 even on adversarial ReDoS payloads); Tier 2 execution `~300,000–400,000 ns` median (`~75–100 ns/byte`, `< 1,500,000 ns` P99 even on adversarial "compression bomb" payloads; `< 500,000 ns` combined L0+L0.5 median) per 4KB payload on commodity CPU hardware. (Validates FR-1, FR-2, FR-4, FR-5).
 - **SM-3 (Secret Interception Rate):** 100% interception and irreversible masking of known cloud credentials, `*_KEY`/`*_SECRET` conventions, and high-entropy Shannon strings. (Validates FR-1).
 - **SM-4 (Syntax Preservation):** 0% JSON deserialization or parse failures in downstream LLM calls after compression. (Validates FR-4).
 
@@ -269,10 +282,11 @@ The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` a
 ## 8. Adapt-In Menu Clusters
 
 ### 8.1 Cross-Cutting Non-Functional Requirements (NFRs)
-- **NFR-1 (Performance & Latency):** Tier 1 deterministic scanning executes in $< 0.5\text{ ms}$ per 4KB payload. Tier 2 statistical compression executes in $< 2.0\text{ ms}$ per 4KB payload. Tier 3 forward pass executes in $\le 25\text{ ms}$ on standard x86_64 and Apple Silicon CPU cores.
+- **NFR-1 (Performance, Nanosecond Latency & Anti-DoS Complexity):** Tier 1 deterministic scanning executes in $O(N)$ linear time (`~20,000–100,000 ns` median / `~5–25 ns/byte`, `< 500,000 ns` P99 on adversarial ReDoS payloads) per 4KB payload. Tier 2 statistical compression executes in $O(N \log N)$ lazy-greedy time (`~300,000–400,000 ns` median / `~75–100 ns/byte`, `< 1,500,000 ns` P99 on adversarial compression-bomb payloads; `< 500,000 ns` combined L0+L0.5 median) per 4KB payload. Tier 3 threat gatekeeping executes its lexical fast-breaker in `< 100,000 ns` (`~10–25 ns/byte`) and bounds neural forward passes to `~1,500,000–3,500,000 ns` median (`< 5,000,000 ns` hard `guard_timeout_ns` P99 ceiling via top-$K$ surprisal window selection, preventing Neural Sponge CPU exhaustion) on standard x86_64 and Apple Silicon CPU cores.
 - **NFR-2 (Memory Footprint & Concurrency):** Memory usage is strictly bounded: Tier 1 & Tier 2 allocate zero persistent heap structures outside active sessions. `VaultHandle` is thread-safe (`Arc<RwLock<...>>`) supporting 10,000+ concurrent requests per second without lock contention.
 - **NFR-3 (Memory Safety & Code Invariants):** The core crate enforces `#![forbid(unsafe_code)]` across all parsing and token manipulation modules.
 - **NFR-4 (Platform Portability):** Zero external C/C++ build requirements. Compiles cleanly on Windows (MSVC), macOS (Clang), and Linux (GCC).
+- **NFR-5 (DevSecOps, SAST/SCA & Pre/Post-Build Test Integrity):** All artifact builds are strictly gated behind passing formatting (`cargo fmt`/`ruff`), linting (`clippy`/`ruff`), SAST (`#![forbid(unsafe_code)]`, panic-free lints, Semgrep/CodeQL, `gitleaks`), SCA (`cargo-audit`, `cargo-deny`, `pip-audit`), and pre-build unit + integration test coverage gates (`cargo-llvm-cov` and `pytest-cov` $\ge 85\%$ line coverage), followed by mandatory post-build black-box E2E integration testing against the compiled CLI binaries, Python `.whl` packages, and Wasm bundles.
 
 ### 8.2 Constraints & Guardrails
 - **Safety Guardrail:** Root cloud credentials (`*_KEY`, `*_SECRET`) are permanently masked with no rehydration mechanism under any condition.
@@ -284,11 +298,11 @@ The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` a
   ```rust
   #[async_trait]
   pub trait SemanticGuard: Send + Sync {
-      async fn evaluate_threat(&self, text: &str) -> Result<ThreatScore, GuardError>;
+      async fn evaluate_threat(&self, text: &str) -> Result<f32, SanitizerError>;
   }
 
   pub trait TokenCompressor: Send + Sync {
-      fn compress(&self, payload: &ContextPayload, rate: f32) -> Result<CompressedResult, CompressError>;
+      fn compress(&self, payload: &str, target_rate: f32) -> Result<String, SanitizerError>;
   }
   ```
 - **Python Public API:**
@@ -303,7 +317,7 @@ The core engine for Tier 1 and Tier 2 must compile to `wasm32-unknown-unknown` a
   ```
 
 ### 8.4 Verification & Reproducible Benchmarks
-- **Benchmarking CLI (`cargo bench` / `context-sanitizer xray --bench`):** Evaluates throughput and token reduction against canonical public datasets:
+- **Benchmarking CLI (`cargo bench` / `context-sanitizer xray --bench`):** Evaluates nanosecond (`ns`) latency (`std::time::Instant::elapsed().as_nanos()` and `ns/byte` Criterion histograms), throughput, and token reduction against canonical public and adversarial datasets:
   - `MeetingBank`: Multi-turn conversational compression verification.
   - `GSM8K`: Multi-step reasoning preservation test.
   - Synthetic Credential & PII Corpus: Regex throughput and false-positive verification.

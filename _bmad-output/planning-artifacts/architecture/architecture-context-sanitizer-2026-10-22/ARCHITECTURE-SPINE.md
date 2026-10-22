@@ -8,7 +8,7 @@ scope: 'context-sanitizer v1.0'
 status: final
 created: '2026-10-22'
 updated: '2026-10-22'
-binds: ['FR-1', 'FR-2', 'FR-3', 'FR-4', 'FR-5', 'FR-6', 'FR-7', 'FR-8', 'FR-9', 'FR-10', 'FR-11', 'FR-12', 'FR-13']
+binds: ['FR-1', 'FR-2', 'FR-3', 'FR-4', 'FR-5', 'FR-6', 'FR-7', 'FR-8', 'FR-9', 'FR-10', 'FR-11', 'FR-12', 'FR-13', 'FR-14']
 sources: ['_bmad-output/planning-artifacts/prds/prd-context-sanitizer-2026-10-22/prd.md', '_bmad-output/planning-artifacts/prds/prd-context-sanitizer-2026-10-22/addendum.md']
 companions: []
 ---
@@ -66,8 +66,8 @@ graph TD
 ### AD-1 — Span-Annotated Pipes-and-Filters Cascade
 
 - **Binds:** `all`, `FR-1`, `FR-2`, `FR-3`, `FR-4`, `FR-5`, `FR-6`, `FR-8`
-- **Prevents:** Heap reallocation churn, UTF-8 character boundary corruption, and pipeline order bypasses (e.g. pruning exposing redacted secret entropy).
-- **Rule:** Scanners execute strictly as read-only passes producing non-overlapping byte `Span` markers over an immutable payload buffer. Redaction spans have absolute priority over compression spans. Secrets are fail-closed; structural formatting is fail-open.
+- **Prevents:** Heap reallocation churn, UTF-8 character boundary corruption, pipeline order bypasses (e.g., syntax-lock smuggling where secrets are hidden inside locked code fences/JSON keys, or pruning exposing redacted secret entropy), and ReDoS / compression-bomb algorithmic complexity attacks.
+- **Rule:** Scanners execute strictly as read-only passes producing non-overlapping byte `Span` markers over an immutable payload buffer (`O(N)` linear-time DFA for Tier 1 `~20,000–100,000 ns` median / `~5–25 ns/byte`, `< 500,000 ns` P99; `O(N log N)` lazy-greedy max-heap submodular selection for Tier 2 `~300,000–400,000 ns` median / `~75–100 ns/byte`, `< 1,500,000 ns` P99, `< 500,000 ns` combined median per 4KB). `Redacted` and `Shadow` spans have absolute priority over `Locked`, `Pruned`, and `Retained` spans (preventing syntax-lock secret smuggling). Secrets are fail-closed; structural formatting is fail-open.
 
 ### AD-2 — Pure-Rust Core Isolation & Unidirectional Workspace Dependencies
 
@@ -87,11 +87,24 @@ graph TD
 - **Prevents:** Downstream LLM HTTP 400 crashes caused by broken JSON escape sequences, unclosed code fences, or stripped commas.
 - **Rule:** Structural JSON delimiters, markdown code fences, inline shell backticks, subshells, and environment variables receive immutable byte locks pre-pruning; post-compression output must pass `serde_json::from_str` verification or fail-open to uncompressed text with secrets remaining permanently masked.
 
-### AD-5 — Trait Decoupling and CPU Fallback for ML Gatekeeping
+### AD-5 — Trait Decoupling, Anti-Sponge Nanosecond Bounding & CPU Fallback for ML Gatekeeping
 
 - **Binds:** `FR-7`, `FR-8`, `FR-9`
-- **Prevents:** Mandatory multi-gigabyte PyTorch/Candle dependencies in standard builds and host application panics on unsupported CPU hardware.
-- **Rule:** Core defines `pub trait SemanticGuard` and `pub trait TokenCompressor`. Candle inference is conditionally compiled behind `--features ml`. If model weights are missing, corrupted, or inference fails, the engine logs a non-fatal warning and falls back to Tier 2 statistical compression without crashing host processes.
+- **Prevents:** Mandatory multi-gigabyte PyTorch/Candle dependencies in standard builds, Neural Sponge CPU exhaustion attacks on multi-window prompts, and host application panics on unsupported CPU hardware.
+- **Rule:** Core defines `pub trait SemanticGuard` and `pub trait TokenCompressor`. Structural prompt-injection and markdown exfiltration signatures are blocked in `< 100,000 ns` (`~10–25 ns/byte`) via $O(N)$ SIMD fast-breaking prior to neural execution. Candle inference (`--features ml`) evaluates at most the top-$K$ ($K \le 2$) highest-surprisal 512-token overlapping windows under a hard `guard_timeout_ns = 5,000,000 ns` P99 deadline (`~1,500,000–3,500,000 ns` median). If model weights are missing, corrupted, timeout, or fail inference, the engine logs a non-fatal warning and falls back to Tier 2 statistical compression without crashing host processes.
+
+### AD-6 — Continuous DevSecOps Verification & Pre-Build Quality/Security Gates
+
+- **Binds:** `all`, `FR-11`, `FR-12`, `FR-13`, `FR-14`
+- **Prevents:** Unaudited transitive vulnerabilities (SCA), source code security flaws (SAST), copyleft license contamination, untested code paths, accidental real-credential commits, and unverified cross-platform wheel/Wasm builds.
+- **Rule:** The repository enforces a local **`pre-commit` framework** (`.pre-commit-config.yaml`) and a strictly ordered, shift-left GitHub Actions pipeline (`.github/workflows/ci.yml` and `release.yml`) where artifact compilation is blocked until all pre-build gates pass:
+  0. **Two-Speed Local `pre-commit` / `pre-push` Gates (`.pre-commit-config.yaml`):** Fast `pre-commit` hooks (`< 3s`: `cargo fmt --check`, `cargo clippy -- -D warnings`, `ruff`, `gitleaks` with `.gitleaks.toml` synthetic fixture allowlist, `cargo deny check licenses bans`) and comprehensive `pre-push` hooks (`cargo audit`, unit tests, source integration tests, and `cargo llvm-cov --fail-under-lines 85`).
+  1. **Formatting & Linting:** `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `ruff format --check`, and `ruff check`.
+  2. **SAST & Secret Scanning:** Compiler/Clippy AST safety lints (`#![forbid(unsafe_code)]`, `deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)` in library code), Semgrep/CodeQL static security analysis, and `gitleaks` repository secret scanning (`.gitleaks.toml`).
+  3. **SCA & License Compliance:** `cargo audit`, `cargo deny check advisories bans licenses sources` (`deny.toml` enforcing MIT/Apache-2.0/BSD-3-Clause), and `pip-audit`.
+  4. **Unit Tests, In-Process Source Integration Tests & Coverage Gate (Pre-Build):** Execute unit tests (`cargo test --workspace --lib --bins`) and in-process crate integration tests (`crates/*/tests/*.rs`, including offline micro-SafeTensors fixtures for `--features ml`), enforcing `cargo llvm-cov --workspace --all-targets --fail-under-lines 85` (and `pytest --cov-fail-under=85`) before any release artifact build starts. Workspace surface crates (`cli`, `py`, `wasm`) are added incrementally per epic, and `pyo3/extension-module` is gated behind a non-default feature so `cargo test --workspace` links cleanly.
+  5. **Gated Artifact Build & Packaging:** Compile release binaries (`cargo build --release`), zero-C Python wheels (`maturin build --release`), and WebAssembly bundles (`wasm-pack build`).
+  6. **Post-Build Black-Box Artifact E2E Integration Tests:** Run end-to-end integration tests directly against the compiled artifacts — executing the release `context-sanitizer xray` binary + `--bench` regression checks, installing the compiled `.whl` into a clean compiler-free virtualenv to run E2E agent middleware `pytest` suites, and testing the packaged `@context-sanitizer/wasm` bundle in JS/WASI runtimes.
 
 ---
 
@@ -135,7 +148,14 @@ graph TD
 
 ```text
 context-sanitizer/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                # Continuous DevSecOps gate (fmt, clippy, audit, deny, gitleaks, E2E matrix)
+│       └── release.yml           # Cross-platform Maturin wheels, CLI binaries & Wasm release pipeline
+├── .gitleaks.toml                # Secret scanning config (allowlists synthetic canary fixtures in tests/benches)
+├── .pre-commit-config.yaml       # Two-speed local pre-commit/pre-push CI hooks
 ├── Cargo.toml                    # Root workspace configuration
+├── deny.toml                     # cargo-deny policy (licenses, advisories, bans, sources)
 ├── crates/
 │   ├── context-sanitizer/        # Core pure-Rust library
 │   │   ├── Cargo.toml
@@ -240,12 +260,13 @@ pub trait TokenCompressor: Send + Sync {
 | **FR-5: Statistical Pruning** | `crates/context-sanitizer/src/compress/shannon.rs`, `bm25.rs` | AD-1 (Read-only span markings) |
 | **FR-6: JSON Schema Minification** | `crates/context-sanitizer/src/compress/schema.rs` | AD-4 (JSON schema preservation) |
 | **FR-7: Decoupled ML Traits** | `crates/context-sanitizer/src/ml/traits.rs` | AD-5 (Pluggable traits) |
-| **FR-8: Encoder Threat Scoring** | `crates/context-sanitizer/src/ml/candle.rs`, `chunking.rs` | AD-5 (Sliding-window Candle runner) |
+| **FR-8: Two-Stage Nanosecond Threat Gatekeeper** | `crates/context-sanitizer/src/ml/candle.rs`, `chunking.rs` | AD-5 (`< 100,000 ns` fast-breaker + top-$K \le 2$ surprisal window under `< 5,000,000 ns` `guard_timeout_ns`) |
 | **FR-9: Fault-Tolerant Fallback** | `crates/context-sanitizer/src/ml/mod.rs` | AD-5 (Zero-crash fallback to Tier 2) |
 | **FR-10: OpenAI Wire Ingestion** | `crates/context-sanitizer/src/wire/` | Consistency Conventions (OpenAI Parity) |
 | **FR-11: Zero-C Python Wheel** | `crates/context-sanitizer-py/` | AD-2 (Maturin precompiled wheels) |
 | **FR-12: Context X-Ray CLI** | `crates/context-sanitizer-cli/` | AD-2 (Unidirectional dependency) |
 | **FR-13: Universal Wasm Package** | `wasm/` | AD-2 (Pure-Rust Wasm compilation) |
+| **FR-14: Automated DevSecOps CI/CD** | `.github/workflows/`, `.pre-commit-config.yaml`, `deny.toml` | AD-6 (Local pre-commit + Continuous DevSecOps gates) |
 
 ---
 
