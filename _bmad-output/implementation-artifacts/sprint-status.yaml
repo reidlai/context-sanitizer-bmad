@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-22-2026 11:30
-last_updated: 10-22-2026 23:55
+last_updated: 10-23-2026 06:18
 project: context-sanitizer
 project_key: NOKEY
 tracking_system: file-system
@@ -47,24 +47,24 @@ development_status:
   2-2-tail-query-auto-anchoring-statistical-context-pruning-anti-c: done
   2-3-openai-json-tool-schema-minification: done
   2-4-context-x-ray-diagnostic-benchmarking-cli-context-sanitizer: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   epic-3: done
   3-1-pluggable-trait-decoupling-semanticguard-tokencompressor-zer: done
   3-2-two-stage-nanosecond-threat-gatekeeper-100-000-ns-fast-break: done
   3-3-fault-isolated-graceful-fallback-to-tier-2-offline-micro-che: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   epic-4: done
   4-1-pyo3-zero-c-core-bindings-gil-free-nanosecond-ffi-opaque-vau: done
   4-2-turnkey-agent-framework-middleware-langchainsanitizer-crewai: done
   4-3-zero-c-maturin-wheel-build-matrix-clean-virtualenv-post-buil: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   epic-5: done
   5-1-universal-webassembly-wasi-bindings-context-sanitizer-wasm-w: done
   5-2-post-build-wasm-wasi-e2e-integration-suite-multi-target-devs: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 action_items:
   - id: "epic-1-retro-item-1-merge-overlapping-spankind-redacted-inte"
     epic: 1
@@ -89,3 +89,31 @@ action_items:
     owner: "Amelia"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-22.md"
+  - id: "epic-2-retro-item-4-cache-shannon-surprisal-lookups-for-repe"
+    epic: 2
+    action: "Cache Shannon surprisal lookups for repeated word stems to maximize throughput
+      on multi-megabyte document streams"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-2-retro-2026-10-23.md"
+  - id: "epic-3-retro-item-5-implement-int8-q4_0-quantized-weight-sup"
+    epic: 3
+    action: "Implement INT8 / Q4_0 quantized weight support in candle.rs for ultra-low
+      memory footprints on constrained environments"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-3-retro-2026-10-23.md"
+  - id: "epic-4-retro-item-6-implement-asynclangchainsanitizer-suppor"
+    epic: 4
+    action: "Implement AsyncLangChainSanitizer supporting native on_llm_start async
+      callback coroutines"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-4-retro-2026-10-23.md"
+  - id: "epic-5-retro-item-7-add-headless-chromium-playwright-executi"
+    epic: 5
+    action: "Add headless Chromium / Playwright execution to CI Stage 5 to verify
+      WebWorker Wasm instantiation in real browser runtimes"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-10-23.md"
