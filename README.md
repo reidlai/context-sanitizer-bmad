@@ -496,3 +496,15 @@ Encountered a bug, security vulnerability, or have an idea for a new feature? Pl
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+### Third-Party Dependency Licenses (`NFR-7`)
+
+All workspace dependencies use commercially permissive open-source licenses verified in CI via [`deny.toml`](deny.toml):
+
+| Crate | Version | License | Role |
+| :--- | :--- | :--- | :--- |
+| `aho-corasick` | `1.1.5` | `Unlicense OR MIT` | Tier 1 $O(N)$ SIMD DFA pattern matching |
+| `serde` | `1.0.210` | `MIT OR Apache-2.0` | Wire protocol serialization framework |
+| `serde_json` | `1.0.128` | `MIT OR Apache-2.0` | OpenAI JSON parsing and validation |
+| `thiserror` | `1.0.64` | `MIT OR Apache-2.0` | Unified library error derivations (`SanitizerError`) |
+| `getrandom` | `0.2` | `MIT OR Apache-2.0` | 128-bit CSPRNG session salts for `VaultHandle` |

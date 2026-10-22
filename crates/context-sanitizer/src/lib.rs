@@ -15,18 +15,46 @@
 //! - **AD-4 (Fail-Open Syntax Verification):** Immutable lexical locking of JSON/code delimiters with
 //!   fail-open fallback guaranteeing `0%` downstream JSON parse errors.
 
+pub mod arena;
+pub mod guard;
+pub mod wire;
+
 use thiserror::Error;
+
+pub use arena::{Span, SpanArena, SpanKind};
+pub use guard::{
+    run_tier1_guard, sanitize_str_with_vault, PiiKind, VaultHandle, REDACTED_CREDENTIAL_MASK,
+};
+pub use wire::{
+    sanitize_chat_completions_json, sanitize_completions_json, ChatCompletionRequest, ChatContent,
+    ChatMessage, CompletionPrompt, CompletionRequest,
+};
 
 /// Unified error type across the `context-sanitizer` pipeline (`AD-2`).
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum SanitizerError {
-    /// Raised when a syntax lock invariant is violated during token pruning.
+    /// Raised when a span's byte offsets are out of bounds or split a multi-byte UTF-8 character (`AD-1`).
+    #[error("invalid span bounds {start}..{end} for buffer of length {len}")]
+    InvalidSpanBounds {
+        /// Inclusive start byte offset.
+        start: usize,
+        /// Exclusive end byte offset.
+        end: usize,
+        /// Total byte length of the source buffer.
+        len: usize,
+    },
+
+    /// Raised when a syntax lock invariant is violated during token pruning (`AD-4`).
     #[error("syntax lock violation: {0}")]
     SyntaxLockViolation(String),
 
     /// Raised when `.rehydrate()` is invoked for an unregistered or external destination (`FR-3`).
     #[error("unauthorized rehydration destination: {0}")]
     UnauthorizedRehydration(String),
+
+    /// Raised when an OpenAI wire payload cannot be parsed or serialized (`FR-10`).
+    #[error("wire payload parse error: {0}")]
+    WireParseError(String),
 
     /// Raised when the System One threat gatekeeper blocks a prompt injection or exfiltration attempt (`FR-8`).
     #[error("threat detected (score: {score_bps} bps): {reason}")]
@@ -38,30 +66,17 @@ pub enum SanitizerError {
     },
 }
 
-/// Non-overlapping byte span annotation over an immutable input payload (`AD-1`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Span {
-    /// Inclusive start byte offset (UTF-8 char boundary).
-    pub start: usize,
-    /// Exclusive end byte offset (UTF-8 char boundary).
-    pub end: usize,
-    /// Classification and precedence of this span.
-    pub kind: SpanKind,
-}
-
-/// Precedence-ordered span classifications (`Redacted` > `Shadow` > `Locked` > `Pruned` > `Retained`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SpanKind {
-    /// Irreversible one-way credential mask (`[REDACTED_CREDENTIAL]`).
-    Redacted(&'static str),
-    /// Session-scoped operational PII shadow token (`<SHADOW:<TYPE>_<HEX6>>`).
-    Shadow(String),
-    /// Immutable syntax token (JSON structural delimiter, code fence, shell substitution).
-    Locked,
-    /// Low-entropy token marked for removal during Tier 2 compression.
-    Pruned,
-    /// Token retained in the final materialized payload.
-    Retained,
+/// Sanitizes a raw text payload using a newly created session [`VaultHandle`] pre-configured with
+/// `allowed_destinations`, returning `(sanitized_text, vault_handle)`.
+#[must_use]
+pub fn sanitize_text<I, S>(input: &str, allowed_destinations: I) -> (String, VaultHandle)
+where
+    I: IntoIterator<Item = S>,
+    S: Into<String>,
+{
+    let vault = VaultHandle::with_destinations(allowed_destinations);
+    let sanitized = sanitize_str_with_vault(input, &vault);
+    (sanitized, vault)
 }
 
 #[cfg(test)]
@@ -69,14 +84,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn span_construction_preserves_bounds() {
-        let span = Span {
-            start: 0,
-            end: 21,
-            kind: SpanKind::Redacted("[REDACTED_CREDENTIAL]"),
-        };
-        assert_eq!(span.start, 0);
-        assert_eq!(span.end, 21);
-        assert_eq!(span.kind, SpanKind::Redacted("[REDACTED_CREDENTIAL]"));
+    fn sanitize_text_round_trip_works() {
+        let (clean, vault) = sanitize_text(
+            "User alice@acme.com leaked AKIAIOSFODNN7EXAMPLE",
+            ["crm_lookup"],
+        );
+        assert!(clean.contains("[REDACTED_CREDENTIAL]"));
+        assert!(!clean.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(clean.contains("<SHADOW:EMAIL_"));
+        let rehydrated = vault.rehydrate(&clean, "crm_lookup");
+        assert_eq!(
+            rehydrated,
+            Ok("User alice@acme.com leaked [REDACTED_CREDENTIAL]".to_owned())
+        );
     }
 }
