@@ -61,9 +61,9 @@ development_status:
   4-3-zero-c-maturin-wheel-build-matrix-clean-virtualenv-post-buil: done
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-universal-webassembly-wasi-bindings-context-sanitizer-wasm-w: backlog
-  5-2-post-build-wasm-wasi-e2e-integration-suite-multi-target-devs: backlog
+  epic-5: done
+  5-1-universal-webassembly-wasi-bindings-context-sanitizer-wasm-w: done
+  5-2-post-build-wasm-wasi-e2e-integration-suite-multi-target-devs: done
   epic-5-retrospective: optional
 action_items:
   - id: "epic-1-retro-item-1-merge-overlapping-spankind-redacted-inte"
