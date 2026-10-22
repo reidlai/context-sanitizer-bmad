@@ -1,2 +1,11 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Exclude BMAD & Agent skill tooling from GitHub Linguist language statistics
+.agent/** linguist-vendored
+.agents/** linguist-vendored
+.claude/** linguist-vendored
+.opencode/** linguist-vendored
+.qwen/** linguist-vendored
+_bmad/** linguist-vendored
+_bmad-output/** linguist-documentation
