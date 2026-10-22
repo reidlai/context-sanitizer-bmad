@@ -1,6 +1,6 @@
 # context-sanitizer-bmad
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-reidlai-orange?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/reidlai)
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-reidlai-ea4aaa?logo=github-sponsors)](https://github.com/sponsors/reidlai)
 
 This repository houses the BMad planning, design artifacts, agent personas, and development specifications for `context-sanitizer`.
 
