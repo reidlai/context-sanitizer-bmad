@@ -2,7 +2,7 @@
 title: 'Epic 5 (Stories 5.1–5.2): Universal WebAssembly, Edge Client Sanitization & Multi-Target Release Pipeline'
 type: 'feature'
 created: '2026-10-23'
-status: 'completed'
+status: 'in-review'
 baseline_revision: '9b17d0e8ad1c2eae20e16176783f9bef66677c41'
 review_loop_iteration: 0
 followup_review_recommended: false
