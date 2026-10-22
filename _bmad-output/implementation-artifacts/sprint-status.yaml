@@ -29,18 +29,18 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-22-2026 11:30
-last_updated: 10-22-2026 11:30
+last_updated: 10-22-2026 17:59
 project: context-sanitizer
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: backlog
-  1-1-workspace-foundation-span-arena-two-speed-devsecops-ci-pre-c: backlog
-  1-2-tier-1-comprehensive-credential-interception-irreversible-re: backlog
-  1-3-operational-pii-detection-cryptographic-session-shadow-vault: backlog
-  1-4-openai-compatible-wire-ingestion-tier-1-e2e-integration-suit: backlog
-  epic-1-retrospective: optional
+  epic-1: done
+  1-1-workspace-foundation-span-arena-two-speed-devsecops-ci-pre-c: done
+  1-2-tier-1-comprehensive-credential-interception-irreversible-re: done
+  1-3-operational-pii-detection-cryptographic-session-shadow-vault: done
+  1-4-openai-compatible-wire-ingestion-tier-1-e2e-integration-suit: done
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-pure-rust-lexical-syntax-token-locking-anti-smuggling-preced: backlog
@@ -65,3 +65,27 @@ development_status:
   5-1-universal-webassembly-wasi-bindings-context-sanitizer-wasm-w: backlog
   5-2-post-build-wasm-wasi-e2e-integration-suite-multi-target-devs: backlog
   epic-5-retrospective: optional
+action_items:
+  - id: "epic-1-retro-item-1-merge-overlapping-spankind-redacted-inte"
+    epic: 1
+    action: "Merge overlapping SpanKind::Redacted intervals in SpanArena::materialize
+      (arena.rs:150-166) so overlapping credential spans redact the union of their
+      byte ranges"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-22.md"
+  - id: "epic-1-retro-item-2-add-a-root-readme-md-to-the-outer-contex"
+    epic: 1
+    action: "Add a root README.md to the outer context-sanitizer-bmad repository documenting
+      the context-sanitizer/ Git submodule layout and two-repo workflow"
+    owner: "Winston"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-22.md"
+  - id: "epic-1-retro-item-3-consolidate-duplicate-is_email_local_cha"
+    epic: 1
+    action: "Consolidate duplicate is_email_local_char (guard/patterns.rs:289) and
+      is_valid_email_local_byte (guard/entropy.rs:41) predicates into a single shared
+      helper in guard"
+    owner: "Amelia"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-1-retro-2026-10-22.md"
