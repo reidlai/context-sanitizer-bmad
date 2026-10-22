@@ -143,6 +143,11 @@ deferred: []
 - **Submodular Knapsack:** The lazy-greedy algorithm uses `std::collections::BinaryHeap` over candidate prune spans, evaluating marginal gain per token removed, achieving $(1 - 1/e)$ approximation bound in $O(N \log N)$ time.
 - **Git Submodule Branch:** All implementation files live in `context-sanitizer/` on branch `feat/epic-2`.
 
+## Auto Run Result
+
+Status: done
+Blocking condition: none
+
 ## Verification
 
 **Commands:**
