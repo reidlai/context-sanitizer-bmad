@@ -55,10 +55,10 @@ development_status:
   3-3-fault-isolated-graceful-fallback-to-tier-2-offline-micro-che: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-pyo3-zero-c-core-bindings-gil-free-nanosecond-ffi-opaque-vau: backlog
-  4-2-turnkey-agent-framework-middleware-langchainsanitizer-crewai: backlog
-  4-3-zero-c-maturin-wheel-build-matrix-clean-virtualenv-post-buil: backlog
+  epic-4: done
+  4-1-pyo3-zero-c-core-bindings-gil-free-nanosecond-ffi-opaque-vau: done
+  4-2-turnkey-agent-framework-middleware-langchainsanitizer-crewai: done
+  4-3-zero-c-maturin-wheel-build-matrix-clean-virtualenv-post-buil: done
   epic-4-retrospective: optional
 
   epic-5: backlog
