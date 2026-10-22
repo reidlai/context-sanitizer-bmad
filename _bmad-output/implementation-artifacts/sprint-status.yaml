@@ -49,10 +49,10 @@ development_status:
   2-4-context-x-ray-diagnostic-benchmarking-cli-context-sanitizer: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-pluggable-trait-decoupling-semanticguard-tokencompressor-zer: backlog
-  3-2-two-stage-nanosecond-threat-gatekeeper-100-000-ns-fast-break: backlog
-  3-3-fault-isolated-graceful-fallback-to-tier-2-offline-micro-che: backlog
+  epic-3: done
+  3-1-pluggable-trait-decoupling-semanticguard-tokencompressor-zer: done
+  3-2-two-stage-nanosecond-threat-gatekeeper-100-000-ns-fast-break: done
+  3-3-fault-isolated-graceful-fallback-to-tier-2-offline-micro-che: done
   epic-3-retrospective: optional
 
   epic-4: backlog
