@@ -70,6 +70,7 @@ development_status:
   6-1-publish-context-sanitizer-core-library-to-crates-io: done
   6-2-publish-context-sanitizer-cli-binary-to-crates-io-and-multi: done
   6-3-hardened-pypi-publication-for-context-sanitizer-py-with-tls: done
+  6-4-pypi-trusted-publisher-registration-and-deployment-environment: done
   epic-6-retrospective: optional
 
 action_items:

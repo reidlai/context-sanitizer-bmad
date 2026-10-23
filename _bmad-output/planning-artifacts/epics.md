@@ -474,3 +474,18 @@ So that downstream Python users are completely protected from the October 2026 e
 **When** executing `pip install context-sanitizer-py`  
 **Then** the wheel installs cleanly without C/C++ compilers and passes `python -c "import context_sanitizer as cs; print(cs.__version__)"` (`FR11`, `NFR4`).
 
+### Story 6.4: PyPI Trusted Publisher Registration & Deployment Environment Verification
+
+As a DevSecOps release engineer,  
+I want `.github/workflows/release.yml` configured with an explicit GitHub `pypi` environment and matching PyPI Trusted Publisher OIDC configuration,  
+So that GitHub Actions exchanges short-lived OIDC tokens directly with PyPI to authenticate wheel releases without static secrets.
+
+**Acceptance Criteria:**
+
+**Given** `.github/workflows/release.yml`  
+**When** the `publish-pypi` job executes  
+**Then** it runs within the GitHub `environment: pypi` (`url: https://pypi.org/p/context-sanitizer-py`), requests `id-token: write`, and uses `pypa/gh-action-pypi-publish@release/v1` with `attestations: true` (`FR11`, `FR14`, `NFR5`, `NFR8`).
+
+**Given** a registered pending or active Trusted Publisher on PyPI (`reidlai/context-sanitizer`, workflow `release.yml`, environment `pypi`)  
+**When** a release tag (`v*.*.*`) is pushed  
+**Then** PyPI validates the OIDC identity claims (`repository: context-sanitizer`, `job_workflow_ref: .../release.yml@refs/tags/...`), mints a short-lived release token, and accepts all platform wheels without static token transmission.
