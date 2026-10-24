@@ -405,3 +405,87 @@ So that every published v1.0 artifact across Crates.io, PyPI, npm, and GitHub Re
 **When** the release pipeline executes
 **Then** it blocks artifact publishing until all 6 DevSecOps stages pass across Linux, macOS, and Windows: (1) Formatting & Linting (`cargo fmt`, `clippy`, `ruff`), (2) SAST & Secret Scanning (`#![forbid(unsafe_code)]`, panic-free lints, Semgrep/CodeQL, `gitleaks`), (3) SCA & License Audit (`cargo-audit`, `cargo-deny`, `pip-audit`), (4) Pre-Build Unit + Source Integration Tests + $\ge 85\%$ Coverage Gate (`cargo-llvm-cov` and `pytest-cov`), (5) Multi-Target Release Compilation (CLI binaries, `maturin` wheels for `manylinux_2_28`/`macos-universal2`/`windows-x64`, and `@context-sanitizer/wasm`), and (6) Post-Build Black-Box Artifact E2E Integration Tests & Benchmark SLA Gates (`FR14`, `NFR8`, `AD-6`)
 **And** generates CycloneDX/SPDX SBOMs and SHA-256 checksum manifests alongside the release artifacts (`FR14`, `NFR7`, `NFR8`).
+
+## Epic 6: Multi-Registry Publishing & Hardened Supply-Chain Release Pipeline
+
+Enable developers worldwide to consume `context-sanitizer` through standard package managers (`cargo add context-sanitizer`, `cargo install context-sanitizer-cli`, `pip install context-sanitizer-py`) backed by automated, cryptographically signed, and TLS-hardened release pipelines protected against the October 2026 eMudhra/emSign CA compromise.
+
+### Story 6.1: Publish `context-sanitizer` Core Library to Crates.io
+
+As a Rust backend developer,  
+I want `context-sanitizer` published to crates.io with complete documentation and package metadata,  
+So that I can add it to my project using `cargo add context-sanitizer` with zero manual configuration.
+
+**Acceptance Criteria:**
+
+**Given** `crates/context-sanitizer/Cargo.toml`  
+**When** validated for crates.io packaging  
+**Then** it specifies `readme = "../../README.md"`, `categories = ["development-tools", "parsing", "web-programming"]`, `keywords = ["sanitizer", "llm", "pii", "token-compression", "prompt-security"]`, and `documentation = "https://docs.rs/context-sanitizer"` (`FR10`, `FR14`, `NFR7`).
+
+**Given** a git release tag (`v*.*.*`) pushed to the repository  
+**When** `.github/workflows/release.yml` executes Stage 5  
+**Then** it runs `cargo publish -p context-sanitizer --dry-run` to verify crate integrity before executing the final `cargo publish -p context-sanitizer` using the scoped crates.io API secret (`CRATES_IO_TOKEN`) (`FR14`, `AD-6`).
+
+**Given** the published crate on crates.io  
+**When** a downstream consumer executes `cargo add context-sanitizer`  
+**Then** Cargo installs version `0.1.0` and resolves all required pure-Rust dependencies (`logos`, `aho-corasick`, `serde`, `thiserror`) with zero C-toolchain requirements (`FR10`, `NFR4`).
+
+### Story 6.2: Publish `context-sanitizer-cli` Binary to Crates.io & Multi-Arch GitHub Releases
+
+As a DevOps engineer or security analyst,  
+I want `context-sanitizer-cli` published to crates.io and distributed as precompiled multi-architecture release binaries on GitHub Releases,  
+So that I can install `context-sanitizer` globally via `cargo install context-sanitizer-cli` or download standalone executables for CI/CD pipelines without compiling from source.
+
+**Acceptance Criteria:**
+
+**Given** `crates/context-sanitizer-cli/Cargo.toml`  
+**When** prepared for crates.io publishing  
+**Then** the package metadata (`description`, `readme`, `keywords`, `categories`, `repository`) is validated, and `context-sanitizer` dependency points to the published crates.io version `0.1.0` (`FR12`, `FR14`, `NFR7`).
+
+**Given** a release workflow run  
+**When** building standalone CLI executables  
+**Then** it compiles optimized binaries across target matrix (`x86_64-unknown-linux-gnu`/`musl`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`), and generates `.tar.gz` and `.zip` archives with SHA-256 checksums uploaded to GitHub Releases (`FR12`, `FR14`, `NFR4`).
+
+**Given** an environment with standard Cargo installed  
+**When** executing `cargo install context-sanitizer-cli`  
+**Then** the `context-sanitizer` binary installs into Cargo's bin directory and supports `context-sanitizer xray --help` and `context-sanitizer xray --bench` (`FR12`).
+
+### Story 6.3: Hardened PyPI Publication for `context-sanitizer-py` with Supply-Chain TLS Mitigations
+
+As an AI agent engineer and DevSecOps lead,  
+I want `context-sanitizer-py` built and published to PyPI using strict TLS certificate verification, minimum patched tooling (`pip >= 2026.2.2`, `certifi >= 2026.10.19`, `uv >= 0.13.4`, `sigstore >= 4.5.1`), PyPI OIDC Trusted Publishing, and Sigstore provenance attestations,  
+So that downstream Python users are completely protected from the October 2026 eMudhra/emSign TLS CA compromise and supply-chain MitM attacks.
+
+**Acceptance Criteria:**
+
+**Given** the CI release job for Python wheel distribution  
+**When** configuring the build and publishing environments  
+**Then** all workflow runners explicitly upgrade and pin `pip >= 2026.2.2`, `certifi >= 2026.10.19`, `uv >= 0.13.4`, and `sigstore >= 4.5.1`, and execute `update-ca-certificates` on Linux runners to purge outdated system certificate caches and unvetted eMudhra/emSign root certificates (`FR11`, `FR14`, `NFR8`).
+
+**Given** wheel publication to PyPI  
+**When** authenticating against `upload.pypi.org`  
+**Then** the workflow utilizes **PyPI Trusted Publishing (OIDC)** via `pypa/gh-action-pypi-publish` with `id-token: write` permissions, eliminating static PyPI API tokens that could otherwise be intercepted across compromised TLS intermediaries (`FR11`, `FR14`, `NFR5`).
+
+**Given** built `.whl` artifacts across Linux (`manylinux_2_28`), macOS (`macos-universal2`), and Windows (`windows-x64`)  
+**When** uploaded to PyPI  
+**Then** the pipeline generates **Sigstore cryptographic signatures** and SLSA provenance attestations (`attestations: true`), enabling downstream clients to cryptographically verify package integrity and publisher authenticity (`FR11`, `FR14`, `NFR8`).
+
+**Given** a clean consumer environment  
+**When** executing `pip install context-sanitizer-py`  
+**Then** the wheel installs cleanly without C/C++ compilers and passes `python -c "import context_sanitizer as cs; print(cs.__version__)"` (`FR11`, `NFR4`).
+
+### Story 6.4: PyPI Trusted Publisher Registration & Deployment Environment Verification
+
+As a DevSecOps release engineer,  
+I want `.github/workflows/release.yml` configured with an explicit GitHub `pypi` environment and matching PyPI Trusted Publisher OIDC configuration,  
+So that GitHub Actions exchanges short-lived OIDC tokens directly with PyPI to authenticate wheel releases without static secrets.
+
+**Acceptance Criteria:**
+
+**Given** `.github/workflows/release.yml`  
+**When** the `publish-pypi` job executes  
+**Then** it runs within the GitHub `environment: pypi` (`url: https://pypi.org/p/context-sanitizer-py`), requests `id-token: write`, and uses `pypa/gh-action-pypi-publish@release/v1` with `attestations: true` (`FR11`, `FR14`, `NFR5`, `NFR8`).
+
+**Given** a registered pending or active Trusted Publisher on PyPI (`reidlai/context-sanitizer`, workflow `release.yml`, environment `pypi`)  
+**When** a release tag (`v*.*.*`) is pushed  
+**Then** PyPI validates the OIDC identity claims (`repository: context-sanitizer`, `job_workflow_ref: .../release.yml@refs/tags/...`), mints a short-lived release token, and accepts all platform wheels without static token transmission.
